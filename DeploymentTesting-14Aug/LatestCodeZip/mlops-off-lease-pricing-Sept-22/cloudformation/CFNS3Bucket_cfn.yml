@@ -1,0 +1,76 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: S3 bucket creation
+  Parameters:
+    CFNS3BucketName:
+      Description: >-
+          S3 bucket for Config
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'vw-cred-datalake-dev-s3-mlops-config'
+    TagTeam:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'itdna'
+    TagProduct:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'dl'
+    TagTenant:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'vw-cred-datalake'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'  
+    CFNKMSKeyId:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'  
+  Resources:
+    
+    CFNS3Bucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: !Ref CFNS3BucketName
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: 'aws:kms'
+                KMSMasterKeyID: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref CFNKMSKeyId]]
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: True
+          IgnorePublicAcls: True
+          BlockPublicPolicy: True
+          RestrictPublicBuckets: True        
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    

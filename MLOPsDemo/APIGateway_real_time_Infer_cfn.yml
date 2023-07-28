@@ -1,0 +1,176 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: This is used to cobine the result of two models
+  Parameters:
+    ModelEndPointXGBoost:
+      Description: >-
+          Enter Sagemaker parameter store loc for XGBoost
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'mlops-off-lease-pricing-ml-training-pipeline-xg-endpoint-name'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'
+  Resources:
+    PreprocessingLambdaFunction:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "rtinfer"]]
+        Role: !GetAtt [ LambdaExecutionRole, Arn ]
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import boto3
+                import sagemaker
+                def lambda_handler(event, context):
+                    # TODO implement
+                    client = boto3.client('sagemaker-runtime')
+                    endpoint_name_xgboost = '${endpoint_name_xgboost}'
+                    payload = json.loads(event['body'])
+                    scoring_vector = [payload['year'],payload['manufacturer'],payload['model'],payload['condition'],payload['cylinders'],payload['fuel'],payload['odometer'],payload['title_status'],payload['transmission'],payload['drive'],payload['type'],payload['paint_color']]
+                    body = ','.join([str(item) for item in scoring_vector])
+                    response_model_xgboost = client.invoke_endpoint(EndpointName=endpoint_name_xgboost,
+                                                  ContentType='text/csv',
+                                                  Body=body)
+                    result_xgboost = float(response_model_xgboost["Body"].read())
+                    return {
+                        'statusCode': 200,
+                        'body' : json.dumps({
+                            'result_xg_boost': str(result_xgboost)
+                        })
+                    }
+              - {endpoint_name_xgboost: !Ref ModelEndPointXGBoost}
+        Runtime: "python3.8"
+        Timeout: "60"
+    ExecutionRole: 
+      Type: "AWS::IAM::Role"
+      Properties: 
+        AssumeRolePolicyDocument: 
+          Version: "2012-10-17"
+          Statement: 
+            - 
+              Effect: "Allow"
+              Principal: 
+                Service: 
+                  - "sagemaker.amazonaws.com"
+              Action: 
+                - "sts:AssumeRole"
+        Path: "/"
+        Policies: 
+          - 
+            PolicyName: "root"
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement: 
+                - 
+                  Effect: "Allow"
+                  Action: "*"
+                  Resource: "*"
+    LambdaExecutionRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: LambdaExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                  Resource: "*"
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        ApiKeySourceType: HEADER
+        Description: An API Gateway with a Lambda Integration
+        EndpointConfiguration:
+          Types:
+            - EDGE
+        Name: lambda-api
+    ApiGatewayResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+        PathPart: 'lambda'
+        RestApiId: !Ref ApiGatewayRestApi
+    ApiGatewayMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: false
+        AuthorizationType: NONE
+        HttpMethod: POST
+        Integration:
+          ConnectionType: INTERNET
+          Credentials: !GetAtt ApiGatewayIamRole.Arn
+          IntegrationHttpMethod: POST
+          PassthroughBehavior: WHEN_NO_MATCH
+          TimeoutInMillis: 29000
+          Type: AWS_PROXY
+          Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PreprocessingLambdaFunction.Arn}/invocations'
+        OperationName: 'lambda'
+        ResourceId: !Ref ApiGatewayResource
+        RestApiId: !Ref ApiGatewayRestApi
+    ApiGatewayModel:
+      Type: AWS::ApiGateway::Model
+      Properties:
+        ContentType: 'application/json'
+        RestApiId: !Ref ApiGatewayRestApi
+        Schema: {}
+    ApiGatewayStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        DeploymentId: !Ref ApiGatewayDeployment
+        Description: Lambda API Stage v0
+        RestApiId: !Ref ApiGatewayRestApi
+        StageName: 'v0'
+    ApiGatewayDeployment:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn: ApiGatewayMethod
+      Properties:
+        Description: Lambda API Deployment
+        RestApiId: !Ref ApiGatewayRestApi
+    ApiGatewayIamRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: ''
+              Effect: 'Allow'
+              Principal:
+                Service:
+                  - 'apigateway.amazonaws.com'
+              Action:
+                - 'sts:AssumeRole'
+        Path: '/'
+        Policies:
+          - PolicyName: LambdaAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt PreprocessingLambdaFunction.Arn

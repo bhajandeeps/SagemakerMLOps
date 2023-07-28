@@ -1,0 +1,14 @@
+{
+	"DriftReportPath":"transformed/insurdemo/monitoring/reporting/drift/",
+	"DataDriftTable":"demodatadrifttbl",
+	"BslineReportPath":"transformed/insurdemo/monitoring/reporting/baselineReport/",
+	"BaselineDataTable":"demobaselineref",
+	"ScoringDataTable":"demoscoredatatbl",
+	"InferReportPath":"scoring/output/batch/xgorig/",
+	"ScoreMonitorBridgeTable":"demoscrpredbridge",
+	"Scoremonitorbridgepath":"transformed/insurdemo/monitoring/reporting/scoremonitorbridge/",
+	"PredictReportPath":"scoring/output/batch/xgresult/",
+	"PredictionDataTbl":"demobatchpredictions",
+	"TrainRefPath":"dataset/",
+	"trainrefdatatbl":"demotrainreftbl"
+}

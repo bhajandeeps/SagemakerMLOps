@@ -1,0 +1,12 @@
+{
+	"pre_processing_instance_type": "ml.m5.xlarge",
+	"training_instance_type": "ml.m5.xlarge",
+	"input_s3_prefix": "data/input/offlease/",
+	"output_s3_prefix": "data/output/offlease",
+	"report_s3_prefix": "monitoring",
+	"code_s3_prefix":"scripts/preproc",
+	"rmse_threshold": "5000",
+	"xgboost_preprocess_script" : "processing_xgboost_script.py",
+	"linear_learner_preprocess_script" : "processing_lr_script.py",
+	"preprocessing_container" : "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.20.0-cpu-py3"
+}

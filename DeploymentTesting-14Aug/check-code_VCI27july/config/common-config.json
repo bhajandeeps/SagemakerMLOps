@@ -1,0 +1,9 @@
+{
+	"tag_team": "itdna",
+	"tag_product": "dll",
+	"tag_tenant": "vw-cred-datalake",
+	"subnet1": "subnet-0cf0e3f46326aa259",
+	"subnet2": "subnet-0156b7f5500cf0b78",
+	"subnet3": "subnet-032420199163cff9b",
+	"sagemaker_vpc": "vpc-0d34abeb15823e530"
+}

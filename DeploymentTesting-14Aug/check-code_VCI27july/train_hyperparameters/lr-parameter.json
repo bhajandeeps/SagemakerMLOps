@@ -1,0 +1,7 @@
+{
+	"epochs": "10",
+	"l1": "0.0006718126982069481",
+	"learning_rate": "0.012084339061345603",
+	"mini_batch_size": "64",
+	"predictor_type": "regressor"
+}

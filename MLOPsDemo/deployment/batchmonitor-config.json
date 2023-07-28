@@ -1,0 +1,22 @@
+{
+	"preprocessing_instance_type": "ml.m5.xlarge",
+	"CodeLocation": "insurdemo/monitoring/inbound/code",
+	"PrefixDriftLambda": "evaluate_monitor_datadrift.zip",
+	"PrefixEvalLambda": "evaluatemonitor_payload.zip",
+	"GlueS3Dest":"transformed/insurdemo/monitoring/inbound/currentrun",
+	"GlueS3Source":"scoring/output/xgresult/",
+	"PrefixJsonlPath":"transformed/insurdemo/monitoring/inbound/",
+	"PrefixPostProcCodeXGB":"score_postprocessing_csv_jsonl.py",
+	"PrefixViolationPath":"transformed/insurdemo/monitoring/outbound/datadrift/",
+	"MDPrefixViolationPath":"transformed/insurdemo/monitoring/outbound/modeldrift/",    
+	"BaselineS3Prefix":"transformed/training/inbound/baseline/",
+	"PrefixGlueCode":"GluebookmarkCode.py",
+	"Schedulefreq": "rate(1 hour)",
+	"PrefixReportPath":"transformed/insurdemo/monitoring/reporting/drift/",
+	"DriftReportPath":"transformed/insurdemo/monitoring/reporting/drift/",
+	"InferReportPath":"transformed/scoring/outbound/",
+	"BslineReportPath":"transformed/scoring/baselineReport/",
+	"Scoremonitorbridgepath":"transformed/monitoring/reporting/scoremonitorbridge/",
+	"InpGroundTruth":"transformed/monitoring/inbound/inpgroundtruth/",
+	"OpGroundTruth":"transformed/monitoring/inbound/currentrun/groundtruth/"
+}

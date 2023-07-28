@@ -1,0 +1,616 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: AWS Step Functions sample project for training a model and performing a batch transform task.
+  Parameters:
+    PreProcessingInstanceType:
+      Description: >-
+          Enter instance type for preprocessing default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'ml.m5.large'
+    ScoringInstanceType:
+      Description: >-
+          Enter instance type for scoring default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'ml.m5.large'
+    ConfigS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'mlops-insurance'
+    DataS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'mlops-insurance'
+    CodeS3Prefix:
+      Description: >-
+          Enter prefix for s3 input  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'code/'
+      
+    InputS3Prefix:
+      Description: >-
+          Enter value of S3 input prefix where data will be stored
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'data/scoreinput/scoringdata.csv'
+    OutputS3Prefix:
+      Description: >-
+          Enter value of S3 output prefix where data will be exported
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'scoring/output'
+    TagTeam:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'itdna'
+    TagProduct:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'dl'
+    TagTenant:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'mlopsdemo' 
+    RandomString:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '9XF2'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'
+    NotifierEmail: 
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'bhajandeep.singh@wipro.com'
+    XGModelParam: 
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'mlops-off-lease-pricing-ml-training-pipeline-xg-model-name'
+    KMSKeyID:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'
+    XGscoreprocessScript:
+      Description: >-
+          XGBoost preprocessing script location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'score_xg_boost_processing_script.py'
+    ConfigKMSKeyId:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'    
+  Resources:
+    XGstepfunction:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        RoleArn: !GetAtt [ SFNIAMRole, Arn ]
+        StateMachineName: !Join [ "-", [!Ref AWS::StackName, "ScoreXGBoostSFN", !Ref RandomString]] 
+        DefinitionString:
+          !Sub
+            - |-
+              {
+                "StartAt": "Pre-Processing",
+                "States": {
+                  "Pre-Processing": {
+                    "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                    "Parameters": {
+                      "ProcessingJobName.$": "$$.Execution.Input['PreprocessingJobName']",
+                      "ProcessingResources": {
+                        "ClusterConfig": {
+                          "InstanceCount": 1,
+                          "InstanceType": "${PreProcessingInstanceType}",
+                          "VolumeSizeInGB": 50
+                        }
+                      },
+                      "ProcessingInputs": [{
+                          "InputName": "input-1",
+                          "S3Input": {
+                            "S3Uri": "s3://${DataS3Bucket}/${InputS3Prefix}",
+                            "LocalPath": "/opt/ml/processing/input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        },
+                        {
+                          "InputName": "code",
+                          "S3Input": {
+                            "S3Uri": "s3://${ConfigBucket}/${codePrefix}/xg/${XGscoreprocessScript}",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        }
+                      ],
+                      "ProcessingOutputConfig": {
+                        "Outputs": [{
+                          "OutputName": "scoring_data",
+                          "S3Output": {
+                            "S3Uri": "s3://${DataS3Bucket}/${OutputS3Prefix}/xgtest/",
+                            "LocalPath": "/opt/ml/processing/output/test",
+                            "S3UploadMode": "EndOfJob"
+                          }
+                        }, 
+                        {
+                          "OutputName": "originfer_data",
+                          "S3Output": {
+                            "S3Uri": "s3://${DataS3Bucket}/${OutputS3Prefix}/xgorig/",
+                            "LocalPath": "/opt/ml/processing/output/orig",
+                            "S3UploadMode": "EndOfJob"
+                          }
+                        }
+                        
+                        ]
+                      },
+                      "AppSpecification": {
+                        "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.23-1-cpu-py3",
+                        "ContainerEntrypoint": [
+                          "python3",
+                          "/opt/ml/processing/input/code/${XGscoreprocessScript}"
+                        ]
+                      },
+                      "StoppingCondition": {
+                        "MaxRuntimeInSeconds": 3600
+                      },
+                      "Tags": [ 
+                          { 
+                            "Key": "mlopsdemo:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "mlopsdemo:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "RoleArn": "${sagemakerrole}"
+                    },
+                    "Type": "Task",
+                    "Next": "Scoring (XGBoost)"
+                  },
+                  "Scoring (XGBoost)": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::sagemaker:createTransformJob.sync",
+                    "Parameters": {
+                      "ModelName.$": "$$.Execution.Input['xgModelName']",
+                      "MaxPayloadInMB": 100,
+                      "DataProcessing": { 
+                        "InputFilter":"$[1:]",
+                        "JoinSource":"Input"
+                       },
+                      "TransformInput": {
+                        "CompressionType": "None",
+                        "ContentType": "text/csv",
+                        "DataSource": {
+                          "S3DataSource": {
+                            "S3DataType": "S3Prefix",
+                            "S3Uri": "s3://${DataS3Bucket}/${OutputS3Prefix}/xgtest/"
+                          }
+                        },
+                        "SplitType":"Line"
+                      },
+                      "TransformOutput": {
+                        "Accept":"text/csv",
+                        "AssembleWith":"Line",
+                        "S3OutputPath.$": "$$.Execution.Input['xgcustscoroutput']"
+                      },
+                      "TransformResources": {
+                        "InstanceCount": 1,
+                        "InstanceType": "${ScoringInstanceType}"
+                      },
+                      "TransformJobName.$": "$$.Execution.Input['TransformJobName']",
+                        "Tags": [ 
+                          { 
+                            "Key": "mlopsdemo:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "mlopsdemo:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ]
+                    },
+                    "End": true
+                  }
+                }
+              }
+            - { ConfigBucket: !Ref ConfigS3Bucket,DataS3Bucket: !Ref DataS3Bucket, PreProcessingInstanceType: !Ref PreProcessingInstanceType, ScoringInstanceType: !Ref ScoringInstanceType, OutputS3Prefix: !Ref OutputS3Prefix, InputS3Prefix: !Ref InputS3Prefix , sagemakerrole: !GetAtt SageMakerIAMRole.Arn,codePrefix: !Ref CodeS3Prefix}
+    
+        Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    SFNIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SFNIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service: states.amazonaws.com
+                Action: "sts:AssumeRole"
+        Path: "/"
+        Policies:
+            - PolicyName: SageMakerAccessPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sagemaker:CreateTrainingJob
+                      - sagemaker:CreateModel
+                      - sagemaker:CreateTransformJob
+                      - iam:PassRole
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - lambda:InvokeFunction
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - events:PutTargets
+                      - events:PutRule
+                      - events:DescribeRule
+                    Resource:
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTransformJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTuningJobsRule"
+        ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+        - 'arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchEventsFullAccess'
+    SageMakerIAMRole:
+      Type: "AWS::IAM::Role"
+      DependsOn: SFNIAMRole
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SMIAMRole", !Ref RandomString]]
+      Properties:
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service: "sagemaker.amazonaws.com"
+                Action: "sts:AssumeRole"
+          Path: "/"
+          Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+     
+          Policies:
+            - PolicyName: SageMakerAPIExecutionPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                    - cloudwatch:PutMetricData
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:CreateLogGroup
+                    - logs:DescribeLogStreams
+                    - ecr:GetAuthorizationToken
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:GetObject
+                      - s3:PutObject
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:ListBucket
+                    Resource: "*"
+          ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+    stepfunctiontriggerlambda:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "ScoreTgrStFN",!Ref RandomString]]
+        Role: !GetAtt [ lambdarole, Arn ]
+        Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import uuid
+                import boto3
+                import time
+                import datetime
+                def lambda_handler(event, context):
+                    # TODO implement
+                    clientssm=boto3.client('ssm')
+                    vyear=datetime.datetime.now().strftime("%Y")
+                    vmonth=datetime.datetime.now().strftime("%m")
+                    vday=datetime.datetime.now().strftime("%d")
+                    vhour=datetime.datetime.now().strftime("%H")
+                    outputpath="s3://${DataS3Bucket}/${OutputS3Prefix}/batch"
+                    xgcustscoroutput=outputpath+"/xgresult/"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    xgpreprocessing_job_name = "${xgstackName}-{}".format(
+                        uuid.uuid1().time_low
+                    )
+                    xgtransform_job_name = "${xgstackName}-{}".format(
+                        uuid.uuid1().time_low
+                    )
+                    mdldic=clientssm.get_parameter(Name='${XGModelParam}')
+                    xgmodel_name=mdldic["Parameter"]["Value"]
+                    client = boto3.client('stepfunctions')
+                    if event["detail"]["requestParameters"]["key"].startswith("${InputS3Prefix}"):
+                      response = client.start_execution(
+                        stateMachineArn = '${XGstateMachineARN}',
+                        input= "{\"PreprocessingJobName\":\""+ xgpreprocessing_job_name+"\",\"TransformJobName\":\""+ xgtransform_job_name+"\",\"xgModelName\":\""+ xgmodel_name+"\",\"xgcustscoroutput\":\""+ xgcustscoroutput+"\"}"
+                      )
+              - {OutputS3Prefix: !Ref OutputS3Prefix, DataS3Bucket: !Ref DataS3Bucket,XGModelParam: !Ref XGModelParam,XGstateMachineARN: !GetAtt [ XGstepfunction, Arn ],xgstackName: !Join [ "-", [!Ref AWS::StackName, "xg"]],codePrefix: !Ref CodeS3Prefix,InputS3Prefix: !Ref InputS3Prefix}
+        Runtime: "python3.7"
+        Timeout: "180"
+        
+    lambdarole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "LambdaIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: LambdaExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                    - "ssm:*"
+                    - "ec2:*"
+                  Resource: "*"
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    TriggerTrainingEventRuleOnData: 
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "scoring-data", !Ref RandomString]]
+        EventPattern: 
+          source:
+            - aws.s3
+          detail-type:
+            - AWS API Call via CloudTrail
+          detail:
+            eventSource:
+              - s3.amazonaws.com
+            eventName:
+              - PutObject
+              - CompleteMultipartUpload
+            requestParameters:
+              bucketName:
+                - !Ref DataS3Bucket
+      
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: 
+              Fn::GetAtt: 
+                - "stepfunctiontriggerlambda"
+                - "Arn"
+            Id: "TargetFunctionV1"
+    PermissionForEventsToInvokeLambda: 
+      Type: AWS::Lambda::Permission
+      Properties: 
+        FunctionName: 
+          Ref: "stepfunctiontriggerlambda"
+        Action: "lambda:InvokeFunction"
+        Principal: "events.amazonaws.com"
+        SourceArn: 
+          Fn::GetAtt: 
+            - "TriggerTrainingEventRuleOnData"
+            - "Arn"      
+    StepFunctionFailureSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: !Join [ "-", [!Ref AWS::StackName, "SFnFail",!Ref RandomString]]  
+        Tags:
+          -
+            Key: "mlopsdemo:team"
+            Value: !Ref TagTeam
+          -
+            Key: "mlopsdemo:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    NotifierSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: !Ref NotifierEmail
+        Protocol: email
+        TopicArn: !Ref StepFunctionFailureSNSTopic
+    ScoreEventRuleOnFailure:
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "failure", !Ref RandomString]]
+        EventPattern: 
+          source:
+            - aws.states
+          detail-type:
+            - Step Functions Execution Status Change
+          detail:
+            stateMachineArn:
+              - !Ref XGstepfunction
+             
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: !Ref StepFunctionFailureSNSTopic
+            Id: "Notification"
+    PolicyForTopicAccess: 
+      Type: AWS::SNS::TopicPolicy
+      Properties: 
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Sid:  "scoring_topic_default_statement_ID"
+              Effect: Allow
+              Principal: 
+                AWS: "*"
+              Action:
+                - "SNS:GetTopicAttributes"
+                - "SNS:SetTopicAttributes"
+                - "SNS:AddPermission"
+                - "SNS:RemovePermission"
+                - "SNS:DeleteTopic"
+                - "SNS:Subscribe"
+                - "SNS:ListSubscriptionsByTopic"
+                - "SNS:Publish"
+                - "SNS:Receive"
+              Resource: !Ref StepFunctionFailureSNSTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceOwner: !Ref AWS::AccountId
+            - Sid:  "scoretopicnotificationaccessid"
+              Effect: Allow
+              Principal: 
+                Service: "events.amazonaws.com"
+              Action: "sns:Publish"
+              Resource: !Ref StepFunctionFailureSNSTopic
+        Topics:
+        - !Ref StepFunctionFailureSNSTopic         

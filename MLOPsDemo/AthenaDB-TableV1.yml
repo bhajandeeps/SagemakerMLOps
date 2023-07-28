@@ -1,0 +1,148 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: AWS Step Functions sample project for training a model and performing a batch transform task.
+  Parameters:
+    stackName:
+      Description: >-
+          Enter instance type for preprocessing default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'Wi-MLOPS-ModelMonitor'
+    DataS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'wi-cred-datalake-dev-raw'
+    DriftReportPath:
+      Description: >-
+          Enter value of S3 for monitoring csv output location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'vehicle/usedcars/reporting/datadrift/'  
+    DataDriftTable:
+      Description: >-
+          Enter value of data drift athena table name
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'datadrift'
+    BaselineDataTable:
+      Description: >-
+          Enter value of data drift athena table name
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'baselineref'
+    BslineReportPath:
+      Description: >-
+          Enter value of S3 path for Glue Destination
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/scoring/baselineReport/'  
+  Resources:
+    ModelMonitor:
+      Type: AWS::Glue::Database
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseInput:
+          Description: A Glue database Model Monitor
+          Name: demomlopsdb
+    DataDriftTbl:
+      Type: AWS::Glue::Table
+      Properties:
+        DatabaseName: !Ref ModelMonitor
+        CatalogId: !Ref AWS::AccountId
+        TableInput:
+          Name: !Ref DataDriftTable
+          TableType: EXTERNAL_TABLE
+          Parameters:
+            classification: csv
+            typeOfData: file
+            skip.header.line.count: '1'
+          StorageDescriptor:
+            BucketColumns: []
+            Columns:
+              - Name: feature_name
+                Type: string
+              - Name: constraint_check_type
+                Type: string
+              - Name: description
+                Type: string
+              - Name: modelname
+                Type: string
+              - Name: start_time
+                Type: string
+              - Name: end_time
+                Type: string
+              - Name: infertype
+                Type: string  
+              - Name: monitorjobname
+                Type: string
+              - Name: baselinestat
+                Type: string
+              - Name: baselinecons
+                Type: string
+              - Name: inp_jsonline
+                Type: string
+              - Name: outjsonpath
+                Type: string
+                 
+            Compressed: false
+            InputFormat: org.apache.hadoop.mapred.TextInputFormat
+            Location: !Join 
+              - ''
+              - - 's3://'
+                - !Ref DataS3Bucket
+                - /
+                - !Ref DriftReportPath
+            OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+            SerdeInfo:
+              Parameters:
+                serialization.format: ','
+                field.delim:  ','
+              SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+    BaselineDataTbl:
+      Type: AWS::Glue::Table
+      Properties:
+        DatabaseName: !Ref ModelMonitor
+        CatalogId: !Ref AWS::AccountId
+        TableInput:
+          Name: !Ref BaselineDataTable
+          TableType: EXTERNAL_TABLE
+          Parameters:
+            classification: csv
+            typeOfData: file
+            skip.header.line.count: '1'
+          StorageDescriptor:
+            BucketColumns: []
+            Columns:
+              - Name: feature
+                Type: string
+              - Name: meanval
+                Type: string
+              - Name: maxval
+                Type: string  
+              - Name: minval
+                Type: string
+              - Name: std_dev
+                Type: string
+                        
+            Compressed: false
+            InputFormat: org.apache.hadoop.mapred.TextInputFormat
+            Location: !Join 
+              - ''
+              - - 's3://'
+                - !Ref DataS3Bucket
+                - /
+                - !Ref BslineReportPath
+            OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+            SerdeInfo:
+              Parameters:
+                serialization.format: ','
+                field.delim:  ','
+              SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe    

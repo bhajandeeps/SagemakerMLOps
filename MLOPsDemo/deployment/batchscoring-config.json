@@ -1,0 +1,8 @@
+{
+	"preprocessing_instance_type": "ml.m5.xlarge",
+	"scoring_instance_type": "ml.m5.xlarge",
+	"input_s3_prefix": "data/scoreinput/",
+	"output_s3_prefix": "scoring/output/batch",
+	"code_s3_prefix":"scripts/score",
+	"xgboost_score_preprocess_script" : "score_xg_boost_processing_script.py"
+}

@@ -1,0 +1,9 @@
+{
+	"preprocessing_instance_type": "ml.m5.xlarge",
+	"ActiveBaselineS3Prefix": "monitoring/",
+	"XGBoostEndPointName": "mlops-off-lease-pricing-ml-training-pipeline-xgboost-endpoint",
+	"LREndPointName": "mlops-off-lease-pricing-ml-training-pipeline-lr-endpoint",
+	"ScheduleExpression": "cron(0 * ? * * *)",
+	"CustombaselineS3Prefix": "custommonitor/"
+	
+  }

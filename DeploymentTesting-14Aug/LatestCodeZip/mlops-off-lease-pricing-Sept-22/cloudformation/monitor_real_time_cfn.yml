@@ -1,0 +1,548 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: Cloudformation template for real time monitoring pipeline
+  Parameters:
+      PreProcessingInstanceType:
+        Description: >-
+            Enter instance type for preprocessing default value is ml.m5.xlarge
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'ml.m5.xlarge'
+      BaselineS3Bucket:
+        Description: >-
+            Enter Name of S3 bucket where we will have scoring data
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'wipro-datalake-init-s3-mlops-config'
+      ConfigBucket:
+        Description: >-
+            Enter Name of S3 bucket where we will have scoring data
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'wipro-datalake-init-s3-mlops-config'
+      ReportS3Prefix:
+        Description: >-
+            Enter report location
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'monitoring/'
+      ScheduleExpression:
+        Description: >-
+            Enter the schedule expression
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'cron(0 12 * * ? *)'
+      XGBoostEndPointName:
+        Description: >-
+            Enter endpoint name
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'mlops-off-lease-pricing-ml-training-pipeline-xgboost-endpoint'
+      LREndPointName:
+        Description: >-
+            Enter endpoint name
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'mlops-off-lease-pricing-ml-training-pipeline-lr-endpoint'
+      Subnet1:
+        Description: >-
+            Enter name of Subnet 1
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'subnet-0156b7f5500cf0b78'
+      Subnet2:
+        Description: >-
+            Enter name of subnet 2
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'subnet-0156b7f5500cf0b78'
+      Subnet3:
+        Description: >-
+            Enter name of Subnet 3
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'subnet-0156b7f5500cf0b78'
+      SecurityGroup:
+        Description: >-
+            Enter name of Security Group
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'sg-044e0e7ce4f5721c0'
+      Environment:
+        Description: >-
+            Random character for CFN
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'init'
+      TagTeam:
+        Description: >-
+            Random character for CFN
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'itdna'
+      TagProduct:
+        Description: >-
+            Random character for CFN
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'dl'
+      TagTenant:
+        Description: >-
+            Random character for CFN
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'vw-cred-datalake'
+      ConfigKMSKeyId:
+        Description: >-
+            Default KMS Key ID
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'
+      KMSKeyId:
+        Description: >-
+            Default KMS Key ID
+        Type: 'String'
+        MinLength: 1
+        MaxLength: 1000
+        Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'  
+  Resources:
+    MonitorSageMakerRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service: "sagemaker.amazonaws.com"
+                Action: "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            - PolicyName: SageMakerAPIExecutionPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                    - cloudwatch:PutMetricData
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:CreateLogGroup
+                    - logs:DescribeLogStreams
+                    - ecr:GetAuthorizationToken
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:GetObject
+                      - s3:PutObject
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:ListBucket
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - kms:Decrypt
+                      - kms:Encrypt
+                      - kms:GenerateDataKey
+                    Resource: 
+                    - !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]
+                    - !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref ConfigKMSKeyId]]  
+          ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+    RealTimeLambdaMonitorRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: LambdaExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                    - "iam:PassRole"
+                    - "ec2:DescribeNetworkInterfaces"
+                    - "ec2:CreateNetworkInterface"
+                    - "ec2:DeleteNetworkInterface"
+                    - "ec2:DescribeInstances"
+                    - "ec2:AttachNetworkInterface"
+                    - "ec2:DescribeSecurityGroups"
+                    - "ec2:DescribeSubnets"
+                    - "ec2:DescribeVpcs"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: 
+                    - !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]
+                    - !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref ConfigKMSKeyId]]  
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    UpdateConfigRule: 
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "update", "rule"]]
+        EventPattern: 
+          source:
+            - aws.s3
+          detail-type:
+            - AWS API Call via CloudTrail
+          detail:
+            eventSource:
+              - s3.amazonaws.com
+            eventName:
+              - PutObject
+              - CompleteMultipartUpload
+            requestParameters:
+              bucketName:
+                - !Ref ConfigBucket  
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: 
+              Fn::GetAtt: 
+                - "MonitorRealTimeLambda"
+                - "Arn"
+            Id: "TargetFunctionV1"
+    PermissionForEventsToInvokeLambda: 
+      Type: AWS::Lambda::Permission
+      Properties: 
+        FunctionName: 
+          Ref: "MonitorRealTimeLambda"
+        Action: "lambda:InvokeFunction"
+        Principal: "events.amazonaws.com"
+        SourceArn: 
+          Fn::GetAtt: 
+            - "UpdateConfigRule"
+            - "Arn"
+    MonitorRealTimeLambda:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "scheduler"]]
+        Role: !GetAtt [ RealTimeLambdaMonitorRole, Arn ]
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import boto3
+                import json
+                client = boto3.client('sagemaker')
+                s3 = boto3.resource('s3')
+                content_object = s3.Object('${ConfigBucket}', 'rtmonitorconfig/real-time-monitor.json')
+                file_content = content_object.get()['Body'].read().decode('utf-8')
+                json_content = json.loads(file_content)
+                schedule_expression = json_content['ScheduleExpression']
+
+                def lambda_handler(event, context):
+                    if event["detail"]["requestParameters"]["key"].startswith("rtmonitorconfig/"):
+                      response = client.list_monitoring_schedules()
+                      monitoring_schedule_result = []
+                      for val in response['MonitoringScheduleSummaries']:
+                          monitoring_schedule_result.append(val['MonitoringScheduleName'])
+                      XGB_schedular_name = "${XGScheduleName}"
+                      LR_Schedular_name = "${LRScheduleName}"
+                      # Updating Schedular 
+                      if XGB_schedular_name in monitoring_schedule_result:
+                        response = client.update_monitoring_schedule(
+                          MonitoringScheduleName='${XGScheduleName}',
+                          MonitoringScheduleConfig={
+                              'ScheduleConfig': {
+                                  'ScheduleExpression': schedule_expression
+                              },
+                              'MonitoringJobDefinition': {
+                                  'BaselineConfig': {
+                                      'ConstraintsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}constraints.json'
+                                      },
+                                      'StatisticsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}statistics.json'
+                                      }
+                                  },
+                                  'MonitoringInputs': [
+                                      {
+                                                  "EndpointInput": {
+                                                      "EndpointName": "${XGEndPointName}",
+                                                      "LocalPath": "/opt/ml/processing/input/monitoring_dataset_input",
+                                                      "S3InputMode": "File",
+                                                      "S3DataDistributionType": "FullyReplicated",
+                                                  }
+                                              },
+                                  ],
+                                  'MonitoringOutputConfig': {
+                                      'MonitoringOutputs': [
+                                          {
+                                              "S3Output": {
+                                                  "S3Uri": f"s3://${ConfigBucket}/monitoring/reports",
+                                                  "LocalPath": "/opt/ml/processing/output",
+                                                  "S3UploadMode": "EndOfJob",
+                                              }
+                                          },
+                                      ],
+                                  },
+                                  'MonitoringResources': {
+                                      "ClusterConfig": {
+                                          "InstanceCount": 1,
+                                          "InstanceType": "${PreProcessingInstanceType}",
+                                          "VolumeSizeInGB": 100,
+                                      }
+                                  },
+                                  'MonitoringAppSpecification': {
+                                      "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer",
+                                  },
+                                  'StoppingCondition': {
+                                      'MaxRuntimeInSeconds': 3600
+                                  },
+                                  'NetworkConfig': {
+                                      'VpcConfig': {
+                                          "SecurityGroupIds": ["${SecurityGroup}"],
+                                          "Subnets": ["${Subnet1}","${Subnet2}","${Subnet3}"]
+                                      }
+                                  },
+                                  'RoleArn': '${SageMakerAPIExecutionRole}'
+                              }
+                          }
+                        )
+                      else:
+                        response = client.create_monitoring_schedule(
+                          MonitoringScheduleName='${XGScheduleName}',
+                          MonitoringScheduleConfig={
+                              'ScheduleConfig': {
+                                  'ScheduleExpression': schedule_expression
+                              },
+                              'MonitoringJobDefinition': {
+                                  'BaselineConfig': {
+                                      'ConstraintsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}constraints.json'
+                                      },
+                                      'StatisticsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}statistics.json'
+                                      }
+                                  },
+                                  'MonitoringInputs': [
+                                      {
+                                                  "EndpointInput": {
+                                                      "EndpointName": "${XGEndPointName}",
+                                                      "LocalPath": "/opt/ml/processing/input/monitoring_dataset_input",
+                                                      "S3InputMode": "File",
+                                                      "S3DataDistributionType": "FullyReplicated",
+                                                  }
+                                              },
+                                  ],
+                                  'MonitoringOutputConfig': {
+                                      'MonitoringOutputs': [
+                                          {
+                                              "S3Output": {
+                                                  "S3Uri": f"s3://${ConfigBucket}/monitoring/reports",
+                                                  "LocalPath": "/opt/ml/processing/output",
+                                                  "S3UploadMode": "EndOfJob",
+                                              }
+                                          },
+                                      ],
+                                  },
+                                  'MonitoringResources': {
+                                      "ClusterConfig": {
+                                          "InstanceCount": 1,
+                                          "InstanceType": "${PreProcessingInstanceType}",
+                                          "VolumeSizeInGB": 100,
+                                      }
+                                  },
+                                  'MonitoringAppSpecification': {
+                                      "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer",
+                                  },
+                                  'StoppingCondition': {
+                                      'MaxRuntimeInSeconds': 3600
+                                  },
+                                  'NetworkConfig': {
+                                      'VpcConfig': {
+                                          "SecurityGroupIds": ["${SecurityGroup}"],
+                                          "Subnets": ["${Subnet1}","${Subnet2}","${Subnet3}"]
+                                      }
+                                  },
+                                  'RoleArn': '${SageMakerAPIExecutionRole}'
+                              }
+                          }
+                        )
+
+
+                      if LR_Schedular_name in monitoring_schedule_result:
+                        response = client.update_monitoring_schedule(
+                          MonitoringScheduleName='${LRScheduleName}',
+                          MonitoringScheduleConfig={
+                              'ScheduleConfig': {
+                                  'ScheduleExpression': schedule_expression
+                              },
+                              'MonitoringJobDefinition': {
+                                  'BaselineConfig': {
+                                      'ConstraintsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}constraints.json'
+                                      },
+                                      'StatisticsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}statistics.json'
+                                      }
+                                  },
+                                  'MonitoringInputs': [
+                                      {
+                                                  "EndpointInput": {
+                                                      "EndpointName": "${LREndPointName}",
+                                                      "LocalPath": "/opt/ml/processing/input/monitoring_dataset_input",
+                                                      "S3InputMode": "File",
+                                                      "S3DataDistributionType": "FullyReplicated",
+                                                  }
+                                              },
+                                  ],
+                                  'MonitoringOutputConfig': {
+                                      'MonitoringOutputs': [
+                                          {
+                                              "S3Output": {
+                                                  "S3Uri": f"s3://${ConfigBucket}/monitoring/reports/",
+                                                  "LocalPath": "/opt/ml/processing/output",
+                                                  "S3UploadMode": "EndOfJob",
+                                              }
+                                          },
+                                      ],
+                                  },
+                                  'MonitoringResources': {
+                                      "ClusterConfig": {
+                                          "InstanceCount": 1,
+                                          "InstanceType": "${PreProcessingInstanceType}",
+                                          "VolumeSizeInGB": 100,
+                                      }
+                                  },
+                                  'MonitoringAppSpecification': {
+                                      "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer",
+                                  },
+                                  'StoppingCondition': {
+                                      'MaxRuntimeInSeconds': 3600
+                                  },
+                                  'NetworkConfig': {
+                                      'VpcConfig': {
+                                          "SecurityGroupIds": ["${SecurityGroup}"],
+                                          "Subnets": ["${Subnet1}","${Subnet2}","${Subnet3}"]
+                                      }
+                                  },
+                                  'RoleArn': '${SageMakerAPIExecutionRole}'
+                              }
+                          }
+                        )
+                      else:
+                        response = client.create_monitoring_schedule(
+                          MonitoringScheduleName='${LRScheduleName}',
+                          MonitoringScheduleConfig={
+                              'ScheduleConfig': {
+                                  'ScheduleExpression': schedule_expression
+                              },
+                              'MonitoringJobDefinition': {
+                                  'BaselineConfig': {
+                                      'ConstraintsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}constraints.json'
+                                      },
+                                      'StatisticsResource': {
+                                          'S3Uri': 's3://${BaselineS3Bucket}/${ReportS3Prefix}statistics.json'
+                                      }
+                                  },
+                                  'MonitoringInputs': [
+                                      {
+                                                  "EndpointInput": {
+                                                      "EndpointName": "${LREndPointName}",
+                                                      "LocalPath": "/opt/ml/processing/input/monitoring_dataset_input",
+                                                      "S3InputMode": "File",
+                                                      "S3DataDistributionType": "FullyReplicated",
+                                                  }
+                                              },
+                                  ],
+                                  'MonitoringOutputConfig': {
+                                      'MonitoringOutputs': [
+                                          {
+                                              "S3Output": {
+                                                  "S3Uri": f"s3://${ConfigBucket}/monitoring/reports/",
+                                                  "LocalPath": "/opt/ml/processing/output",
+                                                  "S3UploadMode": "EndOfJob",
+                                              }
+                                          },
+                                      ],
+                                  },
+                                  'MonitoringResources': {
+                                      "ClusterConfig": {
+                                          "InstanceCount": 1,
+                                          "InstanceType": "${PreProcessingInstanceType}",
+                                          "VolumeSizeInGB": 100,
+                                      }
+                                  },
+                                  'MonitoringAppSpecification': {
+                                      "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer",
+                                  },
+                                  'StoppingCondition': {
+                                      'MaxRuntimeInSeconds': 3600
+                                  },
+                                  'NetworkConfig': {
+                                      'VpcConfig': {
+                                          "SecurityGroupIds": ["${SecurityGroup}"],
+                                          "Subnets": ["${Subnet1}","${Subnet2}","${Subnet3}"]
+                                      }
+                                  },
+                                  'RoleArn': '${SageMakerAPIExecutionRole}'
+                              }
+                          }
+                        )
+                    
+                    
+              - {LRScheduleName: !Join [ "-", [!Ref AWS::StackName, "LRSchedular"]],XGScheduleName: !Join [ "-", [!Ref AWS::StackName, "XGSchedular"]],LREndPointName: !Ref LREndPointName,SageMakerAPIExecutionRole: !GetAtt MonitorSageMakerRole.Arn,BaselineS3Bucket: !Ref BaselineS3Bucket,ConfigBucket: !Ref ConfigBucket, PreProcessingInstanceType: !Ref PreProcessingInstanceType, ReportS3Prefix: !Ref ReportS3Prefix, XGEndPointName: !Ref XGBoostEndPointName, Subnet1: !Ref Subnet1, Subnet2: !Ref Subnet2, Subnet3: !Ref Subnet3, SecurityGroup: !Ref SecurityGroup, ScheduleExpression: !Ref ScheduleExpression, Environment: !Ref Environment}
+        Runtime: "python3.7"
+        Timeout: "60"
+        VpcConfig:
+          SecurityGroupIds: 
+            - !Ref SecurityGroup
+          SubnetIds: 
+            - !Ref Subnet1
+            - !Ref Subnet2
+            - !Ref Subnet3
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
