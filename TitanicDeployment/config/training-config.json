@@ -1,0 +1,13 @@
+{
+	"pre_processing_instance_type": "ml.m5.xlarge",
+	"training_instance_type": "ml.m5.xlarge",
+	"input_s3_prefix": "titanic/input/data",
+	"output_s3_prefix": "titanic/feature",
+	"report_s3_prefix": "titanic/training/inbound/baseline",
+	"code_s3_prefix":"titanic/training/script",
+	"rmse_threshold": "5000",
+	"xgboost_preprocess_script" : "titanic-preprocessing-xgb-script.py",
+	"linear_learner_preprocess_script" : "titanic-preprocessing-linear-learner-script.py",
+	"preprocessing_container" : "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.20.0-cpu-py3",
+	"RealTimeDataCapture":"transformed/titanic/scoring/processing/realtime"
+}

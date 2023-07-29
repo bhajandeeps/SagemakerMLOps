@@ -1,0 +1,2030 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: Mlops pipeline#1 training pipeline
+  Parameters:
+    PreProcessingInstanceType:
+      Description: >-
+          Enter instance type for preprocessing default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'ml.m5.large'
+    DataS3BucketName:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'poc-vci-sagemaker'
+    RealTimeDataCapture:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/scoring/outbound/realtime/xg/'    
+    ConfigS3BucketName:
+      Description: >-
+          S3 bucket for Config
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'wipro-datalake-init-s3-mlops-config'
+    TrainingInstanceType:
+      Description: >-
+          Enter instance type for training default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'ml.m5.large'
+    InputS3Prefix:
+      Description: >-
+          Enter prefix for s3 input  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'data/input/'
+    OutputS3Prefix:
+      Description: >-
+          Enter prefix for s3 output  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'data/output'
+    CodeS3Prefix:
+      Description: >-
+          Enter prefix for s3 input  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'code/'
+    
+    XGmaxdepth:
+      Description: >-
+          Enter Max depth hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '5'
+    XGeta:
+      Description: >-
+          Enter eta hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '0.2'
+    XGgamma:
+      Description: >-
+          Enter gamma hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '4'
+    XGminchildweight:
+      Description: >-
+          Enter Min child weight hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '6'
+    XGsubsample:
+      Description: >-
+          Enter subsample hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '0.7'
+    XGsilent:
+      Description: >-
+          Enter silent hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '0'
+    XGobjective:
+      Description: >-
+          Enter objective hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'reg:linear'
+    XGnumround:
+      Description: >-
+          Enter numround hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '50'
+    Subnet1:
+      Description: >-
+          Enter name of Subnet 1
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0cf0e3f46326aa259'
+    Subnet2:
+      Description: >-
+          Enter name of subnet 2
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    Subnet3:
+      Description: >-
+          Enter name of Subnet 3
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-032420199163cff9b'
+    SagemakerVPC:
+      Description: >-
+          VPC for Sagemaker
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'vpc-0d34abeb15823e530'
+    RandomString:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '9XF2'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'
+    TagTeam:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'itdna'
+    TagProduct:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'dl'
+    TagTenant:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'wipro-datalake'
+    ReportS3Prefix:
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'monitoring'
+    thresholdRMSE:
+      Description: >-
+          Threshold for RMSE
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 5000
+    NotifierEmail: 
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'manish.poddar3@wipro.com'
+    lrepochs:
+      Description: >-
+          Enter epochs hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '5'
+    lrl1:
+      Description: >-
+          Enter l1 hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '0.0006718126982069481'
+    lrlearningrate:
+      Description: >-
+          Enter learning_rate hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '0.012084339061345603'
+    lrminibatchsize:
+      Description: >-
+          Enter mini_batch_size hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '64'
+    lrpredictortype:
+      Description: >-
+          Enter predictor_type hyperparameter
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'regressor'
+    XGPreprocessScript:
+      Description: >-
+          XGBoost preprocessing script location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'processing_xgboost_script.py'
+    LRPreprocessScript:
+      Description: >-
+          Linear Learner script location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'processing_lr_script.py'
+    PreProcessingContainer:
+      Description: >-
+          Preprocesing container
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.20.0-cpu-py3'
+    LRTrainingImage:
+      Description: >-
+          LR Training image
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '382416733822.dkr.ecr.us-east-1.amazonaws.com/linear-learner:latest'
+    XGTrainingImage:
+      Description: >-
+          LR Training image
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '811284229777.dkr.ecr.us-east-1.amazonaws.com/xgboost:latest'
+    KMSKeyID:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'
+  
+  Resources:
+    TrainXGBoostSFN:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        RoleArn: !GetAtt [ SFNIAMRole, Arn ]
+        StateMachineName: !Join [ "-", [!Ref AWS::StackName, "TrainXGBoostSFN", !Ref RandomString]] 
+        DefinitionString:
+          !Sub
+            - |-
+              {
+                "StartAt": "Pre-processing",
+                "States": {
+                  "Pre-processing": {
+                    "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                    "Parameters": {
+                      "ProcessingJobName.$": "$$.Execution.Input['PreprocessingJobName']",
+                      "ProcessingInputs": [
+                        {
+                          "InputName": "input",
+                          "AppManaged": false,
+                          "S3Input": {
+                            "S3Uri": "s3://${DataS3BucketName}/${InputS3Prefix}",
+                            "LocalPath": "/opt/ml/processing/input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        },
+                        {
+                          "InputName": "code",
+                          "AppManaged": false,
+                          "S3Input": {
+                            "S3Uri": "s3://${ConfigBucket}/${codePrefix}/xg/${XGPreprocessScript}",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        }
+                      ],
+                      "ProcessingOutputConfig": {
+                        "Outputs": [
+                          {
+                            "OutputName": "train_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/train",
+                              "LocalPath": "/opt/ml/processing/train",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "train_baseline_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/baselineinp",
+                              "LocalPath": "/opt/ml/processing/trainbase",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "test_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/test",
+                              "LocalPath": "/opt/ml/processing/test",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "validation_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/validation",
+                              "LocalPath": "/opt/ml/processing/validation",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "baseline_modeldrift",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/baseline_modeldrift",
+                              "LocalPath": "/opt/ml/processing/baselinemodeldrift",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "groundtruth",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/groundtruth",
+                              "LocalPath": "/opt/ml/processing/groundtruth",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          }
+                        ]
+                      },
+                      "AppSpecification": {
+                        "ImageUri": "${PreProcessingContainer}",
+                        "ContainerEntrypoint": [
+                          "python3",
+                          "/opt/ml/processing/input/code/${XGPreprocessScript}"
+                        ]
+                      },
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "NetworkConfig": {
+                        "EnableNetworkIsolation": false
+                        
+                      },
+                      "ProcessingResources": {
+                        "ClusterConfig": {
+                          "InstanceCount": 1,
+                          "InstanceType": "${preprssinstype}",
+                          "VolumeSizeInGB": 100
+                        }
+                      }
+                    },
+                    "Type": "Task",
+                    "Next": "Model Training(XGBoost)"
+                  },
+                  "Model Training(XGBoost)": {
+                    "Resource": "arn:aws:states:::sagemaker:createTrainingJob.sync",
+                    "Parameters": {
+                      "AlgorithmSpecification": {
+                        "TrainingImage": "${regionalTrainingImage}",
+                        "TrainingInputMode": "File"
+                      },
+                      "OutputDataConfig": {
+                        "S3OutputPath": "s3://${ConfigBucket}/models"
+                      },
+                      "StoppingCondition": {
+                        "MaxRuntimeInSeconds": 86400
+                      },
+                      "ResourceConfig": {
+                        "InstanceCount": 1,
+                        "InstanceType": "${TrainingInstanceType}",
+                        "VolumeSizeInGB": 100
+                      },
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "InputDataConfig": [
+                        {
+                          "DataSource": {
+                            "S3DataSource": {
+                              "S3DataType": "S3Prefix",
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/train",
+                              "S3DataDistributionType": "FullyReplicated"
+                            }
+                          },
+                          "ContentType": "text/csv",
+                          "ChannelName": "train"
+                        },
+                        {
+                          "DataSource": {
+                            "S3DataSource": {
+                              "S3DataType": "S3Prefix",
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/validation",
+                              "S3DataDistributionType": "FullyReplicated"
+                            }
+                          },
+                          "ContentType": "text/csv",
+                          "ChannelName": "validation"
+                        }
+                      ],
+                      
+                      "HyperParameters": {
+                        "max_depth": "${maxdepth}",
+                        "eta": "${eta}",
+                        "gamma": "${gamma}",
+                        "min_child_weight": "${minchildweight}",
+                        "subsample": "${subsample}",
+                        "silent": "${silent}",
+                        "objective": "${objective}",
+                        "num_round": "${numround}"
+                      },
+                      "TrainingJobName.$": "$$.Execution.Input['TrainingJobName']"
+                    },
+                    "Type": "Task",
+                    "Next": "Save Model"
+                  },
+                  "Save Model": {
+                    "ResultPath": "$.ModelStepResults",
+                    "Parameters": {
+                      "ExecutionRoleArn": "${SageMakerExecutionRole}",
+                      "ModelName.$": "$$.Execution.Input['ModelName']",
+                      
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "PrimaryContainer": {
+                        "Environment": {},
+                        "Image": "${regionalTrainingImage}",
+                        "ModelDataUrl.$": "$['ModelArtifacts']['S3ModelArtifacts']"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::sagemaker:createModel",
+                    "Type": "Task",
+                    "Next": "Query Training Results"
+                  },
+                  "Query Training Results": {
+                    "Parameters": {
+                      "FunctionName": "${LambdaCheckAccuracy}",
+                      "Payload": {
+                        "TrainingJobName.$": "$.TrainingJobName"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "Next": "RMSE < Threshold"
+                  },
+                  "RMSE < Threshold": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$['Payload']['trainingMetrics'][0]['Value']",
+                        "NumericLessThan": ${thresholdRMSE},
+                        "Next": "BaselineJob (Monitoring)"
+                      }
+                    ],
+                    "Default": "Model Accuracy Too Low"
+                  },
+                  "Model Accuracy Too Low": {
+                    "Comment": "Validation accuracy lower than threshold",
+                    "Type": "Fail"
+                  },
+                  "BaselineJob (Monitoring)": {
+                    "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                    "Type": "Task",
+                    "Parameters": {
+                      "ProcessingResources": {
+                        "ClusterConfig": {
+                          "InstanceCount": 1,
+                          "InstanceType": "${preprssinstype}",
+                          "VolumeSizeInGB": 200
+                        }
+                      },
+                      
+                      "ProcessingInputs": [
+                        {
+                          "InputName": "baseline_dataset_input",
+                          "S3Input": {
+                            "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/xg/baselineinp",
+                            "LocalPath": "/opt/ml/processing/input/baseline_dataset_input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        }
+                      ],
+                      "ProcessingOutputConfig": {
+                        "Outputs": [
+                          {
+                            "OutputName": "baseline_dataset_output",
+                            "S3Output": {
+                              "S3Uri": "s3://${ConfigBucket}/${ReportS3Prefix}",
+                              "LocalPath": "/opt/ml/processing/output",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          }
+                        ]
+                      },
+                      "AppSpecification": {
+                        "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer"
+                      },
+                      "StoppingCondition": {
+                        "MaxRuntimeInSeconds": 36000
+                      },
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "Tags": [ 
+                        { 
+                          "Key": "vci:team",
+                          "Value": "${TagTeam}"
+                        },
+                        { 
+                          "Key": "vci:product",
+                          "Value": "${TagProduct}"
+                        },
+                        { 
+                          "Key": "tenant",
+                          "Value": "${TagTenant}"
+                        },
+                        { 
+                          "Key": "env",
+                          "Value": "${Environment}"
+                        }
+
+                    ],
+                    "ProcessingJobName.$": "$$.Execution.Input['BaselineJobName']",
+                      "Environment": {
+                        "dataset_format": "{\"csv\":{\"header\":true,\"output_columns_position\": \"START\"}}",
+                        "dataset_source": "/opt/ml/processing/input/baseline_dataset_input",
+                        "output_path": "/opt/ml/processing/output",
+                        "publish_cloudwatch_metrics": "Disabled"
+                      }
+                    },
+                    "Next": "Create Model Endpoint Config"
+                  },
+                  "Create Model Endpoint Config": {
+                    "Resource": "arn:aws:states:::sagemaker:createEndpointConfig",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['EndPointConfig']",
+                      "DataCaptureConfig" : {
+                        "CaptureContentTypeHeader": {
+                          "CsvContentTypes": ["text/csv"],
+                          "JsonContentTypes": ["application/json"]
+                        },
+                        "CaptureOptions": [{
+                            "CaptureMode": "Input"
+                          },
+                          {
+                            "CaptureMode": "Output"
+                          }
+                        ],
+                        "DestinationS3Uri": "s3://${DataS3BucketName}/${RealTimeDataCapture}/xg/",
+                        "EnableCapture": true,
+                        "InitialSamplingPercentage": 100
+                      },
+                      "ProductionVariants": [
+                        {
+                          "InitialInstanceCount": 1,
+                          "InstanceType": "ml.m5.large",
+                          "ModelName.$": "$$.Execution.Input['ModelName']",
+                          "VariantName": "AllTraffic"
+                        }
+                      ],
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ]
+                    },
+                    "Type": "Task",
+                    "Next": "Check Endpoint"
+                  },
+                  "Check Endpoint": {
+                    "Parameters": {
+                      "FunctionName": "${CheckEndpoint}",
+                      "Payload": {
+                        "EndPoint.$": "$$.Execution.Input['EndpointName']"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "Next": "Endpoint Exist"
+                  },
+                  "Endpoint Exist": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$['Payload']['Flag']",
+                        "NumericLessThan": 1,
+                        "Next": "Create Model Endpoint"
+                      }
+                    ],
+                    "Default": "Update Model Endpoint"
+                  },
+                  "Create Model Endpoint": {
+                    "Resource": "arn:aws:states:::sagemaker:createEndpoint",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['EndPointConfig']",
+                      "EndpointName.$": "$$.Execution.Input['EndpointName']",
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ]
+                    },
+                    "Type": "Task",
+                    "Next": "Export Config"
+                  },
+                  "Update Model Endpoint": {
+                    "Resource": "arn:aws:states:::sagemaker:updateEndpoint",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['EndPointConfig']",
+                      "EndpointName.$": "$$.Execution.Input['EndpointName']"
+                    },
+                    "Type": "Task",
+                    "Next": "Export Config"
+                  },
+                  "Export Config": {
+                    "Parameters": {
+                      "FunctionName": "${XGExportConfig}",
+                      "Payload": {
+                        "EndPointConfig.$": "$$.Execution.Input['EndPointConfig']",
+                        "EndpointName": "${endpointName}",
+                        "ModelName.$": "$$.Execution.Input['ModelName']",
+                        "SSMXGEndpointConfig" : "${XGEndpointConfig}",
+                        "SSMXGEndpointName":"${XGEndpointName}",
+                        "SSMXGModelName":"${XGModelName}"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "End": true
+                  }
+                }
+              }
+            - { XGPreprocessScript : !Ref XGPreprocessScript,CheckEndpoint : !Ref CheckEndpoint,endpointName : !Join [ "-", [!Ref AWS::StackName, "xgboost-endpoint"]] ,XGExportConfig: !Ref XGExportConfig, thresholdRMSE : !Ref thresholdRMSE,XGEndpointConfig : !Ref XGEndpointConfig,XGEndpointName : !Ref XGEndpointName, XGModelName : !Ref XGModelName,exportconfigLambda: !Ref XGExportConfig ,DataS3BucketName: !Ref DataS3BucketName, LambdaCheckAccuracy: !Ref LambdaCheckAccuracy, regionalTrainingImage: !Ref XGTrainingImage, SageMakerExecutionRole: !GetAtt SageMakerIAMRole.Arn, ConfigBucket: !Ref ConfigBucket,preprssinstype: !Ref PreProcessingInstanceType, TrainingInstanceType: !Ref TrainingInstanceType, InputS3Prefix: !Ref InputS3Prefix, OutputS3Prefix: !Ref OutputS3Prefix, maxdepth: !Ref XGmaxdepth,eta: !Ref XGeta, gamma: !Ref XGgamma, minchildweight: !Ref XGminchildweight, subsample: !Ref XGsubsample, silent: !Ref XGsilent, objective: !Ref XGobjective, numround: !Ref XGnumround, Subnet1: !Ref Subnet1, Subnet2: !Ref Subnet2, Subnet3: !Ref Subnet3, SecurityGroup: !Ref SagemakerSecurityGroup,codePrefix: !Ref CodeS3Prefix}
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    
+    SFNIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SFNIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: states.amazonaws.com
+              Action: "sts:AssumeRole"
+        Path: "/"
+        Policies:
+          - PolicyName: !Join [ "-", [!Ref AWS::StackName, "SFN-policy", !Ref RandomString]]
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sagemaker:CreateTrainingJob
+                    - sagemaker:CreateModel
+                    - sagemaker:CreateTransformJob
+                    - iam:PassRole
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]
+                - Effect: Allow
+                  Action:
+                    - events:PutTargets
+                    - events:PutRule
+                    - events:DescribeRule
+                  Resource:
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTransformJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTuningJobsRule"
+        ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+        - 'arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchEventsFullAccess'
+    # SageMaker Execution Role
+    SageMakerIAMRole:
+      Type: "AWS::IAM::Role"
+      DependsOn: SFNIAMRole
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SMIAMRole", !Ref RandomString]]
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: "sagemaker.amazonaws.com"
+              Action: "sts:AssumeRole"
+        Path: "/"
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Policies:
+          - PolicyName: !Join [ "-", [!Ref AWS::StackName, "SM-policy", !Ref RandomString]]
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                  - cloudwatch:PutMetricData
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "s3:*"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]
+                - Effect: Allow
+                  Action:
+                    - s3:ListBucket
+                  Resource: "*"
+        ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+    TriggerStepFN:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "XGTgStFN",!Ref RandomString]]
+        Role: !GetAtt [ LambdaIAMRole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import boto3
+                import uuid
+                import time
+                def lambda_handler(event, context):
+                    # Generate unique names for Pre-Processing Job, Training Job, and Model Evaluation Job for the Step Functions Workflow
+                    training_job_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Training Job requires a unique name
+                    preprocessing_job_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Preprocessing job requires a unique name,
+                    evaluation_job_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    scoring_job_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    endpoint_name = "${xgendpointName}"
+                    endpoint_config_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    model_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    baseline_name = "${stackName}-xg-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name 
+
+
+                    lrtraining_job_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Training Job requires a unique name
+                    lrpreprocessing_job_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Preprocessing job requires a unique name,
+                    lrevaluation_job_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    lrscoring_job_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    lrendpoint_name = "${lrendpointName}"
+                    lrendpoint_config_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    lrmodel_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name
+                    lrbaseline_name = "${stackName}-lr-{}".format(
+                        uuid.uuid1().time_low
+                    )  # Each Evaluation Job requires a unique name 
+
+
+                    client = boto3.client('stepfunctions') 
+                    if event["detail"]["requestParameters"]["key"].startswith("${dataPrefix}"):
+                      response = client.start_execution(
+                          stateMachineArn = '${xgStateMachineARN}',
+                          input= "{\"BaselineJobName\":\""+ baseline_name +"\",\"PreprocessingJobName\":\""+ preprocessing_job_name+"\",\"TrainingJobName\":\""+ training_job_name+"\",\"EvaluationProcessingJobName\":\""+ evaluation_job_name+"\",\"ModelName\":\""+ model_name+"\",\"ScoreJobName\":\""+ scoring_job_name+"\",\"EndpointName\":\""+ endpoint_name+"\",\"EndPointConfig\":\""+ endpoint_config_name+"\"}"
+                      )
+                      time.sleep(50)
+                      response = client.start_execution(
+                          stateMachineArn = '${lrStateMachineARN}',
+                          input= "{\"lrBaselineJobName\":\""+ lrbaseline_name +"\",\"lrPreprocessingJobName\":\""+ lrpreprocessing_job_name+"\",\"lrTrainingJobName\":\""+ lrtraining_job_name+"\",\"lrEvaluationProcessingJobName\":\""+ lrevaluation_job_name+"\",\"lrModelName\":\""+ lrmodel_name+"\",\"lrScoreJobName\":\""+ lrscoring_job_name+"\",\"lrEndpointName\":\""+ lrendpoint_name+"\",\"lrEndPointConfig\":\""+ lrendpoint_config_name+"\"}"
+                      )
+                    if event["detail"]["requestParameters"]["key"].startswith("${codePrefix}/xg"):
+                      response = client.start_execution(
+                          stateMachineArn = '${xgStateMachineARN}',
+                          input= "{\"BaselineJobName\":\""+ baseline_name +"\",\"PreprocessingJobName\":\""+ preprocessing_job_name+"\",\"TrainingJobName\":\""+ training_job_name+"\",\"EvaluationProcessingJobName\":\""+ evaluation_job_name+"\",\"ModelName\":\""+ model_name+"\",\"ScoreJobName\":\""+ scoring_job_name+"\",\"EndpointName\":\""+ endpoint_name+"\",\"EndPointConfig\":\""+ endpoint_config_name+"\"}"
+                      )
+                    time.sleep(50)
+                    if event["detail"]["requestParameters"]["key"].startswith("${codePrefix}/lr"):  
+                      response = client.start_execution(
+                          stateMachineArn = '${lrStateMachineARN}',
+                          input= "{\"lrBaselineJobName\":\""+ lrbaseline_name +"\",\"lrPreprocessingJobName\":\""+ lrpreprocessing_job_name+"\",\"lrTrainingJobName\":\""+ lrtraining_job_name+"\",\"lrEvaluationProcessingJobName\":\""+ lrevaluation_job_name+"\",\"lrModelName\":\""+ lrmodel_name+"\",\"lrScoreJobName\":\""+ lrscoring_job_name+"\",\"lrEndpointName\":\""+ lrendpoint_name+"\",\"lrEndPointConfig\":\""+ lrendpoint_config_name+"\"}"
+                      )
+              - {lrendpointName: !Join [ "-", [!Ref AWS::StackName, "lr-endpoint"]],lrStateMachineARN : !Ref TrainLRPipelineSFn, xgendpointName : !Join [ "-", [!Ref AWS::StackName, "xgboost-endpoint"]], xgStateMachineARN: !GetAtt [ TrainXGBoostSFN, Arn ], stackName: !Ref AWS::StackName, dataPrefix: !Ref InputS3Prefix,codePrefix: !Ref CodeS3Prefix}
+        
+        Runtime: "python3.7"
+        Timeout: "180"
+        
+
+
+    # Lambda function to produce dataset
+    LambdaCheckAccuracy:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "CkAccuracy",!Ref RandomString]]
+        Role: !GetAtt [ LambdaIAMRole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import boto3
+                import logging
+                import json
+
+                logger = logging.getLogger()
+                logger.setLevel(logging.INFO)
+                sm_client = boto3.client('sagemaker')
+
+                #Retrieve transform job name from event and return transform job status.
+                def lambda_handler(event, context):
+
+                    if ('TrainingJobName' in event):
+                        job_name = event['TrainingJobName']
+
+                    else:
+                        raise KeyError('TrainingJobName key not found in function input!'+
+                                      ' The input received was: {}.'.format(json.dumps(event)))
+
+                    #Query boto3 API to check training status.
+                    try:
+                        response = sm_client.describe_training_job(TrainingJobName=job_name)
+                        logger.info("Training job:{} has status:{}.".format(job_name,
+                            response['TrainingJobStatus']))
+
+                    except Exception as e:
+                        response = ('Failed to read training status!'+ 
+                                    ' The training job may not exist or the job name may be incorrect.'+ 
+                                    ' Check SageMaker to confirm the job name.')
+                        print(e)
+                        print('{} Attempted to read job name: {}.'.format(response, job_name))
+
+                    #We can't marshall datetime objects in JSON response. So convert
+                    #all datetime objects returned to unix time.
+                    for index, metric in enumerate(response['FinalMetricDataList']):
+                        metric['Timestamp'] = metric['Timestamp'].timestamp()
+
+                    return {
+                        'statusCode': 200,
+                        'trainingMetrics': response['FinalMetricDataList']
+                    }
+              - { modelname: "poc"}
+                
+        Runtime: "python3.7"
+        Timeout: "60"
+       
+       
+    LambdaIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "LambdaIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+             
+        Policies:
+          - PolicyName: !Join [ "-", [!Ref AWS::StackName, "lambda-policy", !Ref RandomString]]
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:*"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                    - "ssm:*"
+                    - "ec2:DescribeNetworkInterfaces"
+                    - "ec2:CreateNetworkInterface"
+                    - "ec2:DeleteNetworkInterface"
+                    - "ec2:DescribeInstances"
+                    - "ec2:AttachNetworkInterface"
+                    - "ec2:DescribeSecurityGroups"
+                    - "ec2:DescribeSubnets"
+                    - "ec2:DescribeVpcs"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]] 
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    ConfigBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: !Ref ConfigS3BucketName
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    TriggerTrainingEventRuleOnData: 
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "training-data", !Ref RandomString]]
+        EventPattern: 
+          source:
+            - aws.s3
+          detail-type:
+            - AWS API Call via CloudTrail
+          detail:
+            eventSource:
+              - s3.amazonaws.com
+            eventName:
+              - PutObject
+              - CompleteMultipartUpload
+            requestParameters:
+              bucketName:
+                - !Ref DataS3BucketName
+                - !Ref ConfigBucket  
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: 
+              Fn::GetAtt: 
+                - "TriggerStepFN"
+                - "Arn"
+            Id: "TargetFunctionV1"
+    PermissionForEventsToInvokeLambda: 
+      Type: AWS::Lambda::Permission
+      Properties: 
+        FunctionName: 
+          Ref: "TriggerStepFN"
+        Action: "lambda:InvokeFunction"
+        Principal: "events.amazonaws.com"
+        SourceArn: 
+          Fn::GetAtt: 
+            - "TriggerTrainingEventRuleOnData"
+            - "Arn"
+    SagemakerSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+          GroupDescription: Security group for Sagemaker
+          Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+          VpcId:
+             Ref: SagemakerVPC
+          SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 0
+            ToPort: 65535
+            CidrIp: 0.0.0.0/0
+          SecurityGroupEgress:
+          - IpProtocol: tcp
+            FromPort: 0
+            ToPort: 65535
+            CidrIp: 0.0.0.0/0
+    StepFunctionFailureSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: !Join [ "-", [!Ref AWS::StackName, "SFnFail",!Ref RandomString]]  
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    NotifierSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: !Ref NotifierEmail
+        Protocol: email
+        TopicArn: !Ref StepFunctionFailureSNSTopic
+  
+
+  
+    XGTrainEventRuleOnFailure:
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "failure", !Ref RandomString]]
+        EventPattern: 
+          source:
+          - aws.states
+          detail-type:
+          - Step Functions Execution Status Change
+          detail:
+            stateMachineArn:
+            - !Ref TrainXGBoostSFN
+            - !Ref TrainLRPipelineSFn
+        State: ENABLED
+        Targets: 
+          - 
+            Arn: !Ref StepFunctionFailureSNSTopic
+            Id: "Notification"  
+    PolicyForTopicAccess: 
+      Type: AWS::SNS::TopicPolicy
+      Properties: 
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Sid:  "topic_default_statement_ID"
+              Effect: Allow
+              Principal: 
+                AWS: "*"
+              Action:
+                - "SNS:GetTopicAttributes"
+                - "SNS:SetTopicAttributes"
+                - "SNS:AddPermission"
+                - "SNS:RemovePermission"
+                - "SNS:DeleteTopic"
+                - "SNS:Subscribe"
+                - "SNS:ListSubscriptionsByTopic"
+                - "SNS:Publish"
+                - "SNS:Receive"
+              Resource: !Ref StepFunctionFailureSNSTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceOwner: !Ref AWS::AccountId
+            - Sid:  "topicnotificationaccessid"
+              Effect: Allow
+              Principal: 
+                Service: "events.amazonaws.com"
+              Action: "sns:Publish"
+              Resource: !Ref StepFunctionFailureSNSTopic
+        Topics:
+        - !Ref StepFunctionFailureSNSTopic  
+    XGModelName:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "xg-model-name"]] 
+        Type: String
+        Value: !Join [ "-", [!Ref AWS::StackName, "xg-boost-model",!Ref RandomString]]
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+          
+        
+    XGEndpointName:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "xg-endpoint-name"]] 
+        Type: String
+        Value: !Join [ "-", [!Ref AWS::StackName, "xg-boost-model",!Ref RandomString]]
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+
+    XGEndpointConfig:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "xgboost-endpoint-config"]] 
+        Type: String
+        Value: xg-boost-endpoint
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+    XGExportConfig:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "xg-config",!Ref RandomString]]
+        Role: !GetAtt [ LambdaIAMRole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import boto3
+
+                client = boto3.client('ssm')
+
+                def lambda_handler(event, context):
+                    ssm_model_name = event["SSMXGModelName"]
+                    ssm_endpoint_config = event["SSMXGEndpointConfig"]
+                    ssm_endpoint_name = event["SSMXGEndpointName"]
+                    model_name = event["ModelName"]
+                    endpoint_config = event["EndPointConfig"]
+                    endpoint_name = event["EndpointName"]
+                    _ = client.put_parameter(Name=ssm_model_name,Value=model_name,Type='String',Overwrite=True)
+                    _ = client.put_parameter(Name=ssm_endpoint_config,Value=endpoint_config,Type='String',Overwrite=True)
+                    _ = client.put_parameter(Name=ssm_endpoint_name,Value=endpoint_name,Type='String',Overwrite=True)
+                    return {
+                        'statusCode': 200
+                    }
+              - { modelname: "poc"}
+        Runtime: "python3.7"
+        Timeout: "60"
+        
+        
+    
+    
+    TrainLRPipelineSFn:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        RoleArn: !GetAtt [ SFNIAMRole, Arn ]
+        StateMachineName: !Join [ "-", [!Ref AWS::StackName, "LinearLearnerSFN", !Ref RandomString]] 
+        DefinitionString:
+          !Sub
+            - |-
+              {
+                "StartAt": "Pre-processing",
+                "States": {
+                  "Pre-processing": {
+                    "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                    "Parameters": {
+                      "ProcessingJobName.$": "$$.Execution.Input['lrPreprocessingJobName']",
+                      "ProcessingInputs": [
+                        {
+                          "InputName": "input",
+                          "AppManaged": false,
+                          "S3Input": {
+                            "S3Uri": "s3://${DataS3BucketName}/${InputS3Prefix}",
+                            "LocalPath": "/opt/ml/processing/input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        },
+                        {
+                          "InputName": "code",
+                          "AppManaged": false,
+                          "S3Input": {
+                            "S3Uri": "s3://${ConfigBucket}/${codePrefix}/lr/${LRPreprocessScript}",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        }
+                      ],
+                      "ProcessingOutputConfig": {
+                        "Outputs": [
+                          {
+                            "OutputName": "train_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/train",
+                              "LocalPath": "/opt/ml/processing/train",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "train_baseline_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/baselineinp",
+                              "LocalPath": "/opt/ml/processing/trainbase",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "test_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/test",
+                              "LocalPath": "/opt/ml/processing/test",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "validation_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/validation",
+                              "LocalPath": "/opt/ml/processing/validation",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "baseline_modeldrift",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/baseline_modeldrift",
+                              "LocalPath": "/opt/ml/processing/baselinemodeldrift",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          },
+                          {
+                            "OutputName": "groundtruth",
+                            "AppManaged": false,
+                            "S3Output": {
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/groundtruth",
+                              "LocalPath": "/opt/ml/processing/groundtruth",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          }
+                        ]
+                      },
+                      "AppSpecification": {
+                        "ImageUri": "${PreProcessingContainer}",
+                        "ContainerEntrypoint": [
+                          "python3",
+                          "/opt/ml/processing/input/code/${LRPreprocessScript}"
+                        ]
+                      },
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "NetworkConfig": {
+                        "EnableNetworkIsolation": false
+                       
+                      },
+                      "ProcessingResources": {
+                        "ClusterConfig": {
+                          "InstanceCount": 1,
+                          "InstanceType": "${preprssinstype}",
+                          "VolumeSizeInGB": 100
+                        }
+                      }
+                    },
+                    "Type": "Task",
+                    "Next": "Model Training(Linear Learner)"
+                  },
+                  "Model Training(Linear Learner)": {
+                    "Resource": "arn:aws:states:::sagemaker:createTrainingJob.sync",
+                    "Parameters": {
+                      "AlgorithmSpecification": {
+                        "TrainingImage": "${regionalTrainingImage}",
+                        "TrainingInputMode": "File"
+                      },
+                      "OutputDataConfig": {
+                        "S3OutputPath": "s3://${ConfigBucket}/models"
+                      },
+                      "StoppingCondition": {
+                        "MaxRuntimeInSeconds": 86400
+                      },
+                      "ResourceConfig": {
+                        "InstanceCount": 1,
+                        "InstanceType": "${TrainingInstanceType}",
+                        "VolumeSizeInGB": 100
+                      },
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "InputDataConfig": [
+                        {
+                          "DataSource": {
+                            "S3DataSource": {
+                              "S3DataType": "S3Prefix",
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/train",
+                              "S3DataDistributionType": "FullyReplicated"
+                            }
+                          },
+                          "ContentType": "text/csv",
+                          "ChannelName": "train"
+                        },
+                        {
+                          "DataSource": {
+                            "S3DataSource": {
+                              "S3DataType": "S3Prefix",
+                              "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/validation",
+                              "S3DataDistributionType": "FullyReplicated"
+                            }
+                          },
+                          "ContentType": "text/csv",
+                          "ChannelName": "validation"
+                        }
+                      ],
+                     
+                      "HyperParameters": {
+                        "epochs": "${lrepochs}",
+                        "l1": "${lrl1}",
+                        "learning_rate": "${lrlearningrate}",
+                        "mini_batch_size": "${lrminibatchsize}",
+                        "predictor_type": "${lrpredictortype}"
+                      },
+                      "TrainingJobName.$": "$$.Execution.Input['lrTrainingJobName']"
+                    },
+                    "Type": "Task",
+                    "Next": "Save Model"
+                  },
+                  "Save Model": {
+                    "ResultPath": "$.ModelStepResults",
+                    "Parameters": {
+                      "ExecutionRoleArn": "${SageMakerExecutionRole}",
+                      "ModelName.$": "$$.Execution.Input['lrModelName']",
+                      
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ],
+                      "PrimaryContainer": {
+                        "Environment": {},
+                        "Image": "${regionalTrainingImage}",
+                        "ModelDataUrl.$": "$['ModelArtifacts']['S3ModelArtifacts']"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::sagemaker:createModel",
+                    "Type": "Task",
+                    "Next": "Query Training Results"
+                  },
+                  "Query Training Results": {
+                    "Parameters": {
+                      "FunctionName": "${LambdaCheckAccuracy}",
+                      "Payload": {
+                        "TrainingJobName.$": "$.TrainingJobName"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "Next": "RMSE < Threshold"
+                  },
+                  "RMSE < Threshold": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$['Payload']['trainingMetrics'][0]['Value']",
+                        "NumericLessThan": ${thresholdRMSE},
+                        "Next": "BaselineJob (Monitoring)"
+                      }
+                    ],
+                    "Default": "Model Accuracy Too Low"
+                  },
+                  "Model Accuracy Too Low": {
+                    "Comment": "Validation accuracy lower than threshold",
+                    "Type": "Fail"
+                  },
+                  "BaselineJob (Monitoring)": {
+                    "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                    "Type": "Task",
+                    "Parameters": {
+                      "ProcessingResources": {
+                        "ClusterConfig": {
+                          "InstanceCount": 1,
+                          "InstanceType": "${preprssinstype}",
+                          "VolumeSizeInGB": 200
+                        }
+                      },
+                      
+                      "ProcessingInputs": [
+                        {
+                          "InputName": "baseline_dataset_input",
+                          "S3Input": {
+                            "S3Uri": "s3://${DataS3BucketName}/${OutputS3Prefix}/lr/baselineinp",
+                            "LocalPath": "/opt/ml/processing/input/baseline_dataset_input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                          }
+                        }
+                      ],
+                      "ProcessingOutputConfig": {
+                        "Outputs": [
+                          {
+                            "OutputName": "baseline_dataset_output",
+                            "S3Output": {
+                              "S3Uri": "s3://${ConfigBucket}/${ReportS3Prefix}",
+                              "LocalPath": "/opt/ml/processing/output",
+                              "S3UploadMode": "EndOfJob"
+                            }
+                          }
+                        ]
+                      },
+                      "AppSpecification": {
+                        "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer"
+                      },
+                      "StoppingCondition": {
+                        "MaxRuntimeInSeconds": 36000
+                      },
+                      "RoleArn": "${SageMakerExecutionRole}",
+                      "Tags": [ 
+                        { 
+                          "Key": "vci:team",
+                          "Value": "${TagTeam}"
+                        },
+                        { 
+                          "Key": "vci:product",
+                          "Value": "${TagProduct}"
+                        },
+                        { 
+                          "Key": "tenant",
+                          "Value": "${TagTenant}"
+                        },
+                        { 
+                          "Key": "env",
+                          "Value": "${Environment}"
+                        }
+
+                    ],
+                    "ProcessingJobName.$": "$$.Execution.Input['lrBaselineJobName']",
+                      "Environment": {
+                        "dataset_format": "{\"csv\":{\"header\":true,\"output_columns_position\": \"START\"}}",
+                        "dataset_source": "/opt/ml/processing/input/baseline_dataset_input",
+                        "output_path": "/opt/ml/processing/output",
+                        "publish_cloudwatch_metrics": "Disabled"
+                      }
+                    },
+                    "Next": "Create Model Endpoint Config"
+                  },
+                  "Create Model Endpoint Config": {
+                    "Resource": "arn:aws:states:::sagemaker:createEndpointConfig",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['lrEndPointConfig']",
+                      "DataCaptureConfig" : {
+                        "CaptureContentTypeHeader": {
+                          "CsvContentTypes": ["text/csv"],
+                          "JsonContentTypes": ["application/json"]
+                        },
+                        "CaptureOptions": [{
+                            "CaptureMode": "Input"
+                          },
+                          {
+                            "CaptureMode": "Output"
+                          }
+                        ],
+                        "DestinationS3Uri": "s3://${DataS3BucketName}/${RealTimeDataCapture}/ll/",
+                        "EnableCapture": true,
+                        "InitialSamplingPercentage": 100
+                      },
+                      "ProductionVariants": [
+                        {
+                          "InitialInstanceCount": 1,
+                          "InstanceType": "ml.m5.large",
+                          "ModelName.$": "$$.Execution.Input['lrModelName']",
+                          "VariantName": "AllTraffic"
+                        }
+                      ],
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ]
+                    },
+                    "Type": "Task",
+                    "Next": "Check Endpoint"
+                  },
+                  "Check Endpoint": {
+                    "Parameters": {
+                      "FunctionName": "${CheckEndpoint}",
+                      "Payload": {
+                        "EndPoint.$": "$$.Execution.Input['lrEndpointName']"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "Next": "Endpoint Exist"
+                  },
+                  "Endpoint Exist": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$['Payload']['Flag']",
+                        "NumericLessThan": 1,
+                        "Next": "Create Model Endpoint"
+                      }
+                    ],
+                    "Default": "Update Model Endpoint"
+                  },
+                  "Create Model Endpoint": {
+                    "Resource": "arn:aws:states:::sagemaker:createEndpoint",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['lrEndPointConfig']",
+                      "EndpointName.$": "$$.Execution.Input['lrEndpointName']",
+                      "Tags": [ 
+                          { 
+                            "Key": "vci:team",
+                            "Value": "${TagTeam}"
+                          },
+                          { 
+                            "Key": "vci:product",
+                            "Value": "${TagProduct}"
+                          },
+                          { 
+                            "Key": "tenant",
+                            "Value": "${TagTenant}"
+                          },
+                          { 
+                            "Key": "env",
+                            "Value": "${Environment}"
+                          }
+
+                      ]
+                    },
+                    "Type": "Task",
+                    "Next": "Export Config"
+                  },
+                  "Update Model Endpoint": {
+                    "Resource": "arn:aws:states:::sagemaker:updateEndpoint",
+                    "Parameters": {
+                      "EndpointConfigName.$": "$$.Execution.Input['lrEndPointConfig']",
+                      "EndpointName.$": "$$.Execution.Input['lrEndpointName']"
+                    },
+                    "Type": "Task",
+                    "Next": "Export Config"
+                  },
+                  "Export Config": {
+                    "Parameters": {
+                      "FunctionName": "${LRExportConfig}",
+                      "Payload": {
+                        "EndPointConfig.$": "$$.Execution.Input['lrEndPointConfig']",
+                        "EndpointName": "${endpointName}",
+                        "ModelName.$": "$$.Execution.Input['lrModelName']",
+                        "SSMLREndpointConfig" : "${LREndpointConfig}",
+                        "SSMLREndpointName":"${LREndpointName}",
+                        "SSMLRModelName":"${LRModelName}"
+                      }
+                    },
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Type": "Task",
+                    "End": true
+                  }
+                }
+              }
+            - { endpointName : !Join [ "-", [!Ref AWS::StackName, "lr-endpoint"]] ,LRExportConfig: !Ref LRExportConfig, thresholdRMSE : !Ref thresholdRMSE,LREndpointConfig : !Ref LREndpointConfig,LREndpointName : !Ref LREndpointName, LRModelName : !Ref LRModelName ,exportconfigLambda: !Ref XGExportConfig ,DataS3BucketName: !Ref DataS3BucketName, LambdaCheckAccuracy: !Ref LambdaCheckAccuracy, regionalTrainingImage: !Ref LRTrainingImage, SageMakerExecutionRole: !GetAtt SageMakerIAMRole.Arn, ConfigBucket: !Ref ConfigBucket,preprssinstype: !Ref PreProcessingInstanceType, TrainingInstanceType: !Ref TrainingInstanceType, InputS3Prefix: !Ref InputS3Prefix, OutputS3Prefix: !Ref OutputS3Prefix, lrepochs: !Ref lrepochs,lrl1: !Ref lrl1, lrlearningrate: !Ref lrlearningrate, lrminibatchsize: !Ref lrminibatchsize, lrpredictortype: !Ref lrpredictortype, Subnet1: !Ref Subnet1, Subnet2: !Ref Subnet2, Subnet3: !Ref Subnet3, SecurityGroup: !Ref SagemakerSecurityGroup,codePrefix: !Ref CodeS3Prefix}
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+
+
+    LRModelName:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "LR-model-name"]] 
+        Type: String
+        Value: !Join [ "-", [!Ref AWS::StackName, "LR-model",!Ref RandomString]]
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+          
+        
+    LREndpointName:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "LR-endpoint-name"]] 
+        Type: String
+        Value: !Join [ "-", [!Ref AWS::StackName, "LR-model",!Ref RandomString]]
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+
+    LREndpointConfig:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "LR-config"]] 
+        Type: String
+        Value: xg-boost-endpoint
+        Description: Used for storing model versions
+        Tags:
+          vci:team : !Ref TagTeam
+          vci:product : !Ref TagProduct
+          tenant : !Ref TagTenant
+          env : !Ref Environment
+    LRExportConfig:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "LR-config",!Ref RandomString]]
+        Role: !GetAtt [ LambdaIAMRole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import boto3
+
+                client = boto3.client('ssm')
+
+                def lambda_handler(event, context):
+                    ssm_model_name = event["SSMLRModelName"]
+                    ssm_endpoint_config = event["SSMLREndpointConfig"]
+                    ssm_endpoint_name = event["SSMLREndpointName"]
+                    model_name = event["ModelName"]
+                    endpoint_config = event["EndPointConfig"]
+                    endpoint_name = event["EndpointName"]
+                    _ = client.put_parameter(Name=ssm_model_name,Value=model_name,Type='String',Overwrite=True)
+                    _ = client.put_parameter(Name=ssm_endpoint_config,Value=endpoint_config,Type='String',Overwrite=True)
+                    _ = client.put_parameter(Name=ssm_endpoint_name,Value=endpoint_name,Type='String',Overwrite=True)
+                    return {
+                        'statusCode': 200
+                    }
+              - { modelname: "poc"}
+        Runtime: "python3.7"
+        Timeout: "60"
+        
+    CheckEndpoint:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "checkEndpoint",!Ref RandomString]]
+        Role: !GetAtt [ LambdaIAMRole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import boto3
+
+                client = boto3.client('sagemaker')
+
+                def lambda_handler(event, context):
+                    list_endpoints = []
+                    flag = 0
+                    endpoint_check = event['EndPoint']
+                    print(endpoint_check)
+                    endpoint = client.list_endpoints(StatusEquals='InService')['Endpoints']
+                    print(endpoint)
+                    for val in endpoint:
+                        list_endpoints.append(val['EndpointName'])
+                    if endpoint_check in list_endpoints:
+                        flag = 1
+                        
+                    return {
+                        'StatusCode' : 200,
+                        'Flag' : flag
+                    }
+              - { modelname: "poc"}
+        Runtime: "python3.7"
+        Timeout: "60"
+        
+      
+  Outputs:
+    XGEndpointNameOutput:
+      Description: XGBoost endpoint name
+      Value: !Ref XGEndpointName
+      Export:
+        Name: !Sub '${AWS::StackName}-XGEndpointName'
+    LREndpointNameOutput:
+      Description: Linear Learner endpoint name
+      Value: !Ref LREndpointName
+      Export:
+        Name: !Sub '${AWS::StackName}-LREndpointName'
+    XGModelNameOutput:
+      Description: XGBoost model name
+      Value: !Ref XGModelName
+      Export:
+        Name: !Sub '${AWS::StackName}-XGModelName'
+    LRModelNameOutput:
+      Description: Linear Learner model name
+      Value: !Ref LRModelName
+      Export:
+        Name: !Sub '${AWS::StackName}-LRModelName'
+    SagemakerSecurityGroupIDOutput:
+      Description: Sagemaker Security group id 
+      Value: !GetAtt 
+        - SagemakerSecurityGroup
+        - GroupId
+      Export:
+        Name: !Sub '${AWS::StackName}-SagemakerSecurityGroup'

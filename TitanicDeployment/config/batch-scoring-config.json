@@ -1,0 +1,10 @@
+{
+	"preprocessing_instance_type": "ml.m5.xlarge",
+	"scoring_instance_type": "ml.m5.xlarge",
+	"input_s3_prefix": "titanic/data/scoreinput/",
+	"output_s3_prefix": "transformed/titanic/scoring/outbound/batch",
+	"code_s3_prefix":"scripts/titanic/score",
+	"xgboost_score_preprocess_script" : "titanic-score-preprocessing-xgb-script.py",
+	"lr_score_preprocess_script" : "titanic-score-preprocessing-ll-script.py",
+	"ProcessingS3Prefix": "transformed/titanic/scoring/processing"    
+}

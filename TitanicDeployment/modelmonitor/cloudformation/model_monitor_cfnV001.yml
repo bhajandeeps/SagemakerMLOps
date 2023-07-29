@@ -1,0 +1,895 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: AWS Step Functions sample project for training a model and performing a batch transform task.
+  Parameters:
+    stackName:
+      Description: >-
+          Enter instance type for preprocessing default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'Wi-MLOPS-ModelMonitor'
+    PreProcessingInstanceType:
+      Description: >-
+          Enter instance type for preprocessing default value is ml.m5.large
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'ml.m5.large'
+    ConfigS3Bucket:
+      Description: >-
+          S3 bucket for config file location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'wi-cred-datalake-dev-s3-mlops-config'
+    DataS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'wi-cred-datalake-dev-raw'
+    CodeLocation:
+      Description: >-
+          Enter prefix for code  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'transformed/monitoring/inbound/ll/code'
+    
+    PrefixDriftLambda:
+      Description: >-
+          Enter prefix for drift lambda
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'evaluate_monitor_datadrift.zip'
+    
+    PrefixEvalLambda:
+      Description: >-
+          Enter prefix for evaluate lambda
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'evaluatemonitor_payload.zip'
+    PrefixJsonlPath:
+      Description: >-
+          Enter value of S3 path for JSONL input location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/monitoring/inbound/'
+    BaselineS3Prefix:
+        Description: >-
+            Enter monitoring constrain and stat file location
+        Type: 'String'
+        MinLength: 5
+        MaxLength: 100
+        Default: 'monitoring'
+    PrefixViolationPath:
+      Description: >-
+          Enter value of S3 for monitoring output location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/monitoring/outbound/datadrift/ll/'
+    PrefixPostProcCode:
+      Description: >-
+          Enter prefix for CSV to JSONL conversion script
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'score_ll_post_processing_script.py'
+    PrefixGlueCode:
+      Description: >-
+          Enter prefix for S3 bookmark inc data processing
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'Glue_bookmarkScript.py'
+    GlueS3Source:
+      Description: >-
+          Enter value of S3 path for Glue data source location, this is scoring output location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/scoring/outbound/batch/ll/'
+    GlueS3Dest:
+      Description: >-
+          Enter value of S3 path for Glue Destination
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'transformed/monitoring/inbound/ll/currentrun/'
+    Schedulefreq:
+      Description: >-
+          Enter value of event scheduler freq
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'rate(1 hour)'  
+    Subnet1:
+      Description: >-
+          Enter name of Subnet 1
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    Subnet2:
+      Description: >-
+          Enter name of subnet 2
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    Subnet3:
+      Description: >-
+          Enter name of Subnet 3
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    SecurityGroup:
+      Description: >-
+          Enter name of Security Group
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'sg-044e0e7ce4f5721c0'
+    TagTeam:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'itdna'
+    TagProduct:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'dl'
+    TagTenant:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'vw-cred-datalake' 
+    RandomString:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '9XF2'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'
+    NotifierEmail: 
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'bhajandeep.singh@wipro.com'
+    KMSKeyID:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'
+  Resources:
+    CustModelMonitor:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        RoleArn: !GetAtt [ SFNIAMRole, Arn ]
+        StateMachineName: !Join [ "-", [!Ref AWS::StackName, "CustModelMonitor", !Ref RandomString]] 
+        DefinitionString:
+          !Sub
+            - |-
+              {
+                  "StartAt": "CSV Consolidation",
+                  "States": {
+                      "CSV Consolidation": {
+                          "Parameters": {
+                              "JobName": "${GlueJobs3Bookmark}",
+                              "Arguments": {
+                                  "--S3_SOURCE": "s3://${DataS3Bucket}/${GlueS3Source}",
+                                  "--S3_DEST": "s3://${DataS3Bucket}/${GlueS3Dest}"
+                              }
+                          },
+                          "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                          "Type": "Task",
+                          "Next": "Evaluate Payload"
+                      },
+                      "Evaluate Payload": {
+                          "Parameters": {
+                              "FunctionName": "${EvaluatePayloadlambda}"
+                          },
+                          "Resource": "arn:aws:states:::lambda:invoke",
+                          "Type": "Task",
+                          "Next": "Monitor Payload Present"
+                      },
+                      "Monitor Payload Present": {
+                          "Type": "Choice",
+                          "Choices": [
+                              {
+                                  "Variable": "$['Payload']['flag']",
+                                  "NumericEquals": 1,
+                                  "Next": "Post-processing"
+                              }
+                          ],
+                          "Default": "Bypass-No data file to process"
+                      },
+                      "Bypass-No data file to process": {
+                          "Comment": "No Data file to process",
+                          "Type": "Pass",
+                          "End": true
+                      },
+                      "Post-processing": {
+                          "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                          "Parameters": {
+                              "ProcessingJobName.$": "$$.Execution.Input['Post-processing']",
+                              "ProcessingInputs": [
+                                  {
+                                      "InputName": "input",
+                                      "AppManaged": false,
+                                      "S3Input": {
+                                          "S3Uri": "s3://${DataS3Bucket}/${GlueS3Dest}",
+                                          "LocalPath": "/opt/ml/processing/input/data",
+                                          "S3DataType": "S3Prefix",
+                                          "S3InputMode": "File",
+                                          "S3DataDistributionType": "FullyReplicated",
+                                          "S3CompressionType": "None"
+                                      }
+                                  },
+                                  {
+                                      "InputName": "code",
+                                      "AppManaged": false,
+                                      "S3Input": {
+                                          "S3Uri": "s3://${DataS3Bucket}/${CodeLocation}/${PrefixPostProcCode}",
+                                          "LocalPath": "/opt/ml/processing/input/code",
+                                          "S3DataType": "S3Prefix",
+                                          "S3InputMode": "File",
+                                          "S3DataDistributionType": "FullyReplicated",
+                                          "S3CompressionType": "None"
+                                      }
+                                  }
+                              ],
+                              "ProcessingOutputConfig": {
+                                  "Outputs": [
+                                      {
+                                          "OutputName": "ll_data",
+                                          "AppManaged": false,
+                                          "S3Output": {
+                                              "S3Uri.$": "$$.Execution.Input['ll_jsonlinppath']",
+                                              "LocalPath": "/opt/ml/processing/ll",
+                                              "S3UploadMode": "EndOfJob"
+                                          }
+                                      }
+                                  ]
+                              },
+                              "AppSpecification": {
+                                  "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.20.0-cpu-py3",
+                                  "ContainerEntrypoint": [
+                                      "python3",
+                                      "/opt/ml/processing/input/code/${PrefixPostProcCode}"
+                                  ]
+                              },
+                              "RoleArn": "${SageMakerIAMRole}",
+                              "ProcessingResources": {
+                                  "ClusterConfig": {
+                                      "InstanceCount": 1,
+                                      "InstanceType":"${PreProcessingInstanceType}",
+                                      "VolumeSizeInGB": 30
+                                  }
+                              }
+                          },
+                          "Type": "Task",
+                          "Next": "Batch Monitoring"
+                      },
+                      "Batch Monitoring": {
+                          "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
+                          "Parameters": {
+                              "ProcessingJobName.$": "$$.Execution.Input['MonitorJobName']",
+                              "ProcessingInputs": [
+                                  {
+                                      "InputName": "input_1",
+                                      "AppManaged": false,
+                                      "S3Input": {
+                                          "S3Uri.$": "$$.Execution.Input['ll_jsonlinppath']",
+                                          "LocalPath.$": "$$.Execution.Input['monitorlocalpath']",
+                                          "S3DataType": "S3Prefix",
+                                          "S3InputMode": "File",
+                                          "S3DataDistributionType": "FullyReplicated",
+                                          "S3CompressionType": "None"
+                                      }
+                                  },
+                                  {
+                                      "InputName": "baseline",
+                                      "AppManaged": false,
+                                      "S3Input": {
+                                          "S3Uri":"s3://${ConfigS3Bucket}/${BaselineS3Prefix}/statistics.json",
+                                          "LocalPath": "/opt/ml/processing/baseline/stats",
+                                          "S3DataType": "S3Prefix",
+                                          "S3InputMode": "File",
+                                          "S3DataDistributionType": "FullyReplicated",
+                                          "S3CompressionType": "None"
+                                      }
+                                  },
+                                  {
+                                      "InputName": "constraints",
+                                      "AppManaged": false,
+                                      "S3Input": {
+                                          "S3Uri": "s3://${ConfigS3Bucket}/${BaselineS3Prefix}/constraints.json",
+                                          "LocalPath": "/opt/ml/processing/baseline/constraints",
+                                          "S3DataType": "S3Prefix",
+                                          "S3InputMode": "File",
+                                          "S3DataDistributionType": "FullyReplicated",
+                                          "S3CompressionType": "None"
+                                      }
+                                  }
+                              ],
+                              "ProcessingOutputConfig": {
+                                  "Outputs": [
+                                      {
+                                          "OutputName": "result",
+                                          "AppManaged": false,
+                                          "S3Output": {
+                                              "S3Uri.$":"$$.Execution.Input['monitoroppath']",
+                                              "LocalPath": "/opt/ml/processing/output",
+                                              "S3UploadMode": "EndOfJob"
+                                          }
+                                      }
+                                  ]
+                              },
+                              "AppSpecification": {
+                                  "ImageUri": "156813124566.dkr.ecr.us-east-1.amazonaws.com/sagemaker-model-monitor-analyzer"
+                              },
+                              "RoleArn": "${SageMakerIAMRole}",
+                              "Environment": {
+                                  "baseline_constraints": "/opt/ml/processing/baseline/constraints/constraints.json",
+                                  "baseline_statistics": "/opt/ml/processing/baseline/stats/statistics.json",
+                                  "dataset_format": "{\"sagemakerCaptureJson\":{\"captureIndexNames\":[\"endpointInput\",\"endpointOutput\"]}}",
+                                  "dataset_source": "/opt/ml/processing/input/endpoint",
+                                  "start_time.$": "$$.Execution.Input['start_time']",
+                                  "end_time.$": "$$.Execution.Input['end_time']",
+                                  "metric_time.$": "$$.Execution.Input['metric_time']",
+                                  "output_path": "/opt/ml/processing/output",
+                                  "publish_cloudwatch_metrics": "Disabled",
+                                  "sagemaker_endpoint_name": "poc",
+                                  "sagemaker_monitoring_schedule_name": "poc"
+                              },
+                              "ProcessingResources": {
+                                  "ClusterConfig": {
+                                      "InstanceCount": 1,
+                                      "InstanceType": "${PreProcessingInstanceType}",
+                                      "VolumeSizeInGB": 30
+                                  }
+                              },
+                              "StoppingCondition": {
+                                  "MaxRuntimeInSeconds": 3600
+                              }
+                          },
+                          "Type": "Task",
+                          "Next": "Evaluate Drift"
+                      },
+                      "Evaluate Drift": {
+                          "Parameters": {
+                              "FunctionName": "${EvaluateDrift}",
+                              "Payload": {
+                               "monitoropkey.$": "$$.Execution.Input['monitoropkey']"
+                                }
+                          },
+                          "Resource": "arn:aws:states:::lambda:invoke",
+                          "Type": "Task",
+                          "End": true
+                      }
+                  }
+              }
+            - {GlueJobs3Bookmark: !Ref GlueJobs3Bookmark, EvaluateDrift: !Ref EvaluateDrift,EvaluatePayloadlambda: !Ref EvaluatePayloadlambda,SageMakerIAMRole: !GetAtt SageMakerIAMRole.Arn, Subnet1: !Ref Subnet1, Subnet2: !Ref Subnet2, Subnet3: !Ref Subnet3, SecurityGroup: !Ref SecurityGroup}
+    
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    SFNIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SFNIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service: states.amazonaws.com
+                Action: "sts:AssumeRole"
+        Path: "/"
+        Policies:
+            - PolicyName: SageMakerAccessPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - sagemaker:CreateTrainingJob
+                      - sagemaker:CreateModel
+                      - sagemaker:CreateTransformJob
+                      - iam:PassRole
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - lambda:InvokeFunction
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - events:PutTargets
+                      - events:PutRule
+                      - events:DescribeRule
+                    Resource:
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTransformJobsRule"
+                    - !Sub "arn:${AWS::Partition}:events:*:*:rule/StepFunctionsGetEventsForSageMakerTuningJobsRule"
+        ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+        - 'arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchEventsFullAccess'
+    SageMakerIAMRole:
+      Type: "AWS::IAM::Role"
+      DependsOn: SFNIAMRole
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "SMIAMRole", !Ref RandomString]]
+      Properties:
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service: "sagemaker.amazonaws.com"
+                Action: "sts:AssumeRole"
+          Path: "/"
+          Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+     
+          Policies:
+            - PolicyName: SageMakerAPIExecutionPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                    - cloudwatch:PutMetricData
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:CreateLogGroup
+                    - logs:DescribeLogStreams
+                    - ecr:GetAuthorizationToken
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:GetObject
+                      - s3:PutObject
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - s3:ListBucket
+                    Resource: "*"
+                  - Effect: Allow
+                    Action:
+                      - kms:Decrypt
+                      - kms:Encrypt
+                      - kms:GenerateDataKey
+                    Resource: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]  
+          ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+    stepfunctiontriggerlambda:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "MonitorJobTgrStFN",!Ref RandomString]]
+        Role: !GetAtt [ lambdarole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import uuid
+                import boto3
+                import time
+                import datetime
+                def lambda_handler(event, context):
+                    # TODO implement
+                    client = boto3.client('stepfunctions')
+                    vyear=datetime.datetime.now().strftime("%Y")
+                    vmonth=datetime.datetime.now().strftime("%m")
+                    vday=datetime.datetime.now().strftime("%d")
+                    vhour=datetime.datetime.now().strftime("%H")
+                    ehour=datetime.datetime(int(vyear),int(vmonth),int(vday),int(vhour)+1).strftime("%H")
+                    jsonlinppath="s3://${DataS3Bucket}/${PrefixJsonlPath}"
+                    ll_jsonlinppath=jsonlinppath+"ll"+"/"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    xg_jsonlinppath=jsonlinppath+"xg"+"/"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    monitorlocalpath="/opt/ml/processing/input/endpoint/poc/AllTraffic/"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    monitoroppath="s3://${DataS3Bucket}/${PrefixViolationPath}"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    monitoropkey="${PrefixViolationPath}"+vyear+"/"+vmonth+"/"+vday+"/"+vhour+"/"
+                    start_time=("{}-{}-{}T{}:{}:{}Z".format(vyear,vmonth,vday,vhour,"00","00"))
+                    end_time=("{}-{}-{}T{}:{}:{}Z".format(vyear,vmonth,vday,ehour,"00","00"))
+                    metric_time=("{}-{}-{}T{}:{}:{}Z".format(vyear,vmonth,vday,vhour,"00","00"))
+
+                    Glue_job_name = "Glue_S3_Bookmark"
+                    Processing_job_name =  "${stackName}-processing-{}".format(
+                        uuid.uuid1().time_low)
+                    Monitor_job_name =  "${stackName}-monitoring-{}".format(
+                        uuid.uuid1().time_low)
+                    response = client.start_execution(
+                        stateMachineArn = '${CustModelMonitorARN}',
+                        input= "{\"GlueJobName\":\""+ Glue_job_name+"\",\"Post-processing\":\""+ Processing_job_name+"\",\"MonitorJobName\":\""+ Monitor_job_name+"\",\"ll_jsonlinppath\":\""+ ll_jsonlinppath+"\",\"xg_jsonlinppath\":\""+ xg_jsonlinppath+"\",\"monitorlocalpath\":\""+ monitorlocalpath+"\",\"monitoroppath\":\""+ monitoroppath+"\",\"start_time\":\""+ start_time+"\",\"end_time\":\""+ end_time+"\",\"metric_time\":\""+ metric_time+"\",\"monitoropkey\":\""+ monitoropkey+"\"}"
+                      )
+                    
+              - {CustModelMonitorARN: !GetAtt [ CustModelMonitor, Arn ]}
+        Runtime: "python3.7"
+        Timeout: "180"
+    EvaluatePayloadlambda:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "EvaluatePayloadlambda",!Ref RandomString]]
+        Role: !GetAtt [ lambdarole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import uuid
+                import boto3
+                import time
+                import datetime
+                def lambda_handler(event, context):
+                    client = boto3.client("s3")
+                    bucket="${DataS3Bucket}"
+                    prefix="${GlueS3Dest}"
+                    resp=client.list_objects(
+                        Bucket=bucket,
+                        Prefix=prefix)
+                    if "Contents" in resp:
+                        return {'flag':1}
+                    else:
+                        return {'flag':0}
+              - { modelname: "poc"}
+        Runtime: "python3.7"
+        Timeout: "60"
+    EvaluateDrift:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "EvaluateDrift",!Ref RandomString]]
+        Role: !GetAtt [ lambdarole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import uuid
+                import boto3
+                import time
+                import datetime
+                def lambda_handler(event, context):
+                    try:
+                      s3_client = boto3.client('s3')
+                      monitoropkey=event['monitoropkey']
+                      print(monitoropkey)
+                      v_s3_input_bucket = "${DataS3Bucket}"
+                      monitoropkey =monitoropkey+"constraint_violations.json"
+                      response = s3_client.get_object(Bucket=v_s3_input_bucket,Key=monitoropkey)
+                      text = response['Body'].read().decode('utf-8')
+                      data = json.loads(text)
+                      body = data
+                      subject = "Data Drift Monitor - Linear Learner"
+                      sns_topic_arn="${StepFunctionFailureSNSTopic}"
+                      sns_client = boto3.client('sns')
+                      response = sns_client.publish(
+                      TargetArn=sns_topic_arn,
+                      Message=json.dumps({'default': json.dumps(f"{data}"),
+                            'sms': subject,
+                            'email': body}),Subject=subject,
+                            MessageStructure='json')
+                      return response      
+                    except Exception as e:
+                      print(str(e))
+                      return "No Drift detected"
+              - { modelname: "poc",StepFunctionFailureSNSTopic: !Ref StepFunctionFailureSNSTopic}      
+        Runtime: "python3.7"
+        Timeout: "180"
+    GlueJobs3Bookmark:
+      Type: "AWS::Glue::Job"
+      Properties:
+        Name: !Join [ "-", [!Ref AWS::StackName, "ModelMonitorS3DataExtract",!Ref RandomString]]
+        Command:
+          Name: "ModelMonitorS3DataExtract"
+          ScriptLocation: !Join [ "/", ["s3:/", !Ref DataS3Bucket, !Ref CodeLocation, !Ref PrefixGlueCode]]
+          PythonVersion: "3"
+        DefaultArguments:
+          "--job-bookmark-option": "job-bookmark-enable"
+          "--job-language": "Python 3"
+        Role:  !GetAtt [ GlueRole, Arn ]
+        GlueVersion: "3.0"
+        NumberOfWorkers: 2
+        WorkerType: "G.2X"
+        Tags:
+          "vci:team": !Ref TagTeam
+          "vci:product": !Ref TagProduct
+          "tenant": !Ref TagTenant
+          "env": !Ref Environment
+    lambdarole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "LambdaIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: LambdaExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                    - "s3:ListBucket"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "sns:*"
+                  Resource: "*"  
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                    - "ssm:*"
+                    - "ec2:*"
+                  Resource: "*"
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    StepFunctionFailureSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: !Join [ "-", [!Ref AWS::StackName, "SFnFail",!Ref RandomString]]  
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    NotifierSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: !Ref NotifierEmail
+        Protocol: email
+        TopicArn: !Ref StepFunctionFailureSNSTopic
+    MonitorEventRuleOnFailure:
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "Monitorfailure", !Ref RandomString]]
+        EventPattern: 
+          source:
+            - aws.states
+          detail-type:
+            - Step Functions Execution Status Change
+          detail:
+            stateMachineArn:
+              - !Ref CustModelMonitor
+          
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: !Ref StepFunctionFailureSNSTopic
+            Id: "Notification"
+    PolicyForTopicAccess: 
+      Type: AWS::SNS::TopicPolicy
+      Properties: 
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Sid:  "Monitor_topic_default_statement_ID"
+              Effect: Allow
+              Principal: 
+                AWS: "*"
+              Action:
+                - "SNS:GetTopicAttributes"
+                - "SNS:SetTopicAttributes"
+                - "SNS:AddPermission"
+                - "SNS:RemovePermission"
+                - "SNS:DeleteTopic"
+                - "SNS:Subscribe"
+                - "SNS:ListSubscriptionsByTopic"
+                - "SNS:Publish"
+                - "SNS:Receive"
+              Resource: !Ref StepFunctionFailureSNSTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceOwner: !Ref AWS::AccountId
+            - Sid:  "monitortopicnotificationaccessid"
+              Effect: Allow
+              Principal: 
+                Service: "events.amazonaws.com"
+              Action: "sns:Publish"
+              Resource: !Ref StepFunctionFailureSNSTopic
+        Topics:
+        - !Ref StepFunctionFailureSNSTopic         
+    GlueRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "GlueIAMRole", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: glue.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: GlueExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                    - "s3:ListBucket"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !Join [":", [arn:aws:kms:us-east-1,!Ref AWS::AccountId, !Ref KMSKeyID]]   
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+    ModelMonitorPipelineScheduleEvent: 
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "ScheduledRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "Scheduler", !Ref RandomString]]
+        ScheduleExpression: "rate(1 hour)"
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: 
+              Fn::GetAtt: 
+                - "stepfunctiontriggerlambda"
+                - "Arn"
+            Id: "TargetFunctionV1"
+    PermissionForEventsToInvokeLambda: 
+      Type: AWS::Lambda::Permission
+      Properties: 
+        FunctionName: 
+          Ref: "stepfunctiontriggerlambda"
+        Action: "lambda:InvokeFunction"
+        Principal: "events.amazonaws.com"
+        SourceArn: 
+          Fn::GetAtt: 
+            - "ModelMonitorPipelineScheduleEvent"
+            - "Arn"          

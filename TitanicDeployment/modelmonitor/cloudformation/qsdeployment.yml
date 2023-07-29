@@ -1,0 +1,317 @@
+---
+  AWSTemplateFormatVersion: 2010-09-09
+  Description: AWS Step Functions sample project for Quicksight deployment
+  Parameters:
+    ConfigS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'vw-cred-datalake-init-s3-mlops-config'
+    DataS3Bucket:
+      Description: >-
+          S3 bucket for data location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 100
+      Default: 'poc-vci-sagemaker'
+    CodeLocation:
+      Description: >-
+          Enter prefix for s3 input  location
+      Type: 'String'
+      MinLength: 5
+      MaxLength: 1000
+      Default: 'code/'
+    Subnet1:
+      Description: >-
+          Enter name of Subnet 1
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    Subnet2:
+      Description: >-
+          Enter name of subnet 2
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    Subnet3:
+      Description: >-
+          Enter name of Subnet 3
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'subnet-0156b7f5500cf0b78'
+    SecurityGroup:
+      Description: >-
+          Enter name of Security Group
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'sg-044e0e7ce4f5721c0'
+    TagTeam:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'itdna'
+    TagProduct:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'dl'
+    TagTenant:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'vw-cred-datalake' 
+    RandomString:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: '9XF2'
+    Environment:
+      Description: >-
+          Random character for CFN
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'init'
+    NotifierEmail: 
+      Description: >-
+          Report prefix location
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'bhajandeep.singh@wipro.com'
+    KMSKeyID:
+      Description: >-
+          Default KMS Key ID
+      Type: 'String'
+      MinLength: 1
+      MaxLength: 1000
+      Default: 'key/6e46ef2c-3be2-45ac-a9d6-f697c56201ce'
+  Resources:
+    qsdeploytriggerlambda:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: "index.lambda_handler"
+        FunctionName: !Join [ "-", [!Ref AWS::StackName, "QSdeploy",!Ref RandomString]]
+        Role: !GetAtt [ lambdarole, Arn ]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        Code:
+          ZipFile:
+            !Sub
+              - |-
+                import json
+                import uuid
+                import boto3
+                import time
+                import datetime
+                from io import StringIO
+                def lambda_handler(event, context):
+                    # TODO implement
+                    #codloc="${CodeLocation}"
+                    if event["detail"]["requestParameters"]["key"].startswith("transformed/monitoring/qsight/"):
+                      inpfils3bkt=event["detail"]["requestParameters"]["bucketName"]
+                      inpfilkey=event["detail"]["requestParameters"]["key"]
+                      filname=inpfilkey.split('/')[-1]
+                      filname=filname.split('.')[0]
+                      clientssm=boto3.client('ssm')
+                      vyear=datetime.datetime.now().strftime("%Y")
+                      vmonth=datetime.datetime.now().strftime("%m")
+                      vday=datetime.datetime.now().strftime("%d")
+                      vhour=datetime.datetime.now().strftime("%H")
+                      vmin=(datetime.datetime.now().strftime("%M"))
+                      vsec=(datetime.datetime.now().strftime("%S"))
+                      unqstr=(vyear+vmonth+vday+vhour+vmin+vsec)
+                      print("QuickSightDeploy",unqstr)
+              - {DataS3Bucket: !Ref DataS3Bucket}         
+        Runtime: "python3.6"
+        Timeout: "180"
+        MemorySize: 1024
+    lambdarole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: !Join [ "-", [!Ref AWS::StackName, "QSdevops", !Ref RandomString]]
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: LambdaExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:PutObject"
+                    - "s3:GetObject"
+                    - "s3:ListBucket"
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - "states:StartExecution"
+                    - "sagemaker:*"
+                    - "ssm:*"
+                    - "ec2:*"
+                  Resource: "*"
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    TriggerQSDeployEventRuleOnData: 
+      Type: AWS::Events::Rule
+      Properties: 
+        Description: "EventRule"
+        Name: !Join [ "-", [!Ref AWS::StackName, "QSTrigger", !Ref RandomString]]
+        EventPattern: 
+          source:
+            - aws.s3
+          detail-type:
+            - AWS API Call via CloudTrail
+          detail:
+            eventSource:
+              - s3.amazonaws.com
+            eventName:
+              - PutObject
+              - CompleteMultipartUpload
+            requestParameters:
+              bucketName:
+                - !Ref ConfigS3Bucket
+      
+        State: "ENABLED"
+        Targets: 
+          - 
+            Arn: 
+              Fn::GetAtt: 
+                - "qsdeploytriggerlambda"
+                - "Arn"
+            Id: "TargetFunctionV1"
+    PermissionForEventsToInvokeLambda: 
+      Type: AWS::Lambda::Permission
+      Properties: 
+        FunctionName: 
+          Ref: "qsdeploytriggerlambda"
+        Action: "lambda:InvokeFunction"
+        Principal: "events.amazonaws.com"
+        SourceArn: 
+          Fn::GetAtt: 
+            - "TriggerQSDeployEventRuleOnData"
+            - "Arn"      
+    QSDeployFailureSNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: !Join [ "-", [!Ref AWS::StackName, "QSFailure",!Ref RandomString]]  
+        Tags:
+          -
+            Key: "vci:team"
+            Value: !Ref TagTeam
+          -
+            Key: "vci:product"
+            Value: !Ref TagProduct
+          -
+            Key: "tenant"
+            Value: !Ref TagTenant
+          -
+            Key: "env"
+            Value: !Ref Environment
+    NotifierSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: !Ref NotifierEmail
+        Protocol: email
+        TopicArn: !Ref QSDeployFailureSNSTopic
+    # QSDeployEventRuleOnFailure:
+    #   Type: AWS::Events::Rule
+    #   Properties: 
+    #     Description: "EventRule"
+    #     Name: !Join [ "-", [!Ref AWS::StackName, "QSfailure", !Ref RandomString]]
+    #     EventPattern: 
+    #       source:
+    #         - aws.states
+    #       detail-type:
+    #         - Step Functions Execution Status Change
+    #       detail:
+    #         stateMachineArn:
+    #           - !Ref XGstepfunction
+    #           - !Ref LRstepfunction
+    #     State: "ENABLED"
+    #     Targets: 
+    #       - 
+    #         Arn: !Ref StepFunctionFailureSNSTopic
+    #         Id: "Notification"
+    #         InputTransformer:
+    #           InputPathsMap:
+    #             "starttime": "$.time"
+    #             "statemachine": "$.detail.stateMachineArn"
+    #             "status": "$.detail.status"
+    #           InputTemplate: |
+    #             "The step machine <statemachine> is in status <status> at time <starttime> "
+    PolicyForTopicAccess: 
+      Type: AWS::SNS::TopicPolicy
+      Properties: 
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Sid:  "scoring_topic_default_statement_ID"
+              Effect: Allow
+              Principal: 
+                AWS: "*"
+              Action:
+                - "SNS:GetTopicAttributes"
+                - "SNS:SetTopicAttributes"
+                - "SNS:AddPermission"
+                - "SNS:RemovePermission"
+                - "SNS:DeleteTopic"
+                - "SNS:Subscribe"
+                - "SNS:ListSubscriptionsByTopic"
+                - "SNS:Publish"
+                - "SNS:Receive"
+              Resource: !Ref QSDeployFailureSNSTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceOwner: !Ref AWS::AccountId
+            - Sid:  "scoretopicnotificationaccessid"
+              Effect: Allow
+              Principal: 
+                Service: "events.amazonaws.com"
+              Action: "sns:Publish"
+              Resource: !Ref QSDeployFailureSNSTopic
+        Topics:
+        - !Ref QSDeployFailureSNSTopic
