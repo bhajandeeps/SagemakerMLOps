@@ -1,0 +1,219 @@
+<html>
+<head>
+<title>AWS AI/ML Lab Portal</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+table {
+  border-spacing: 0.5rem;
+  table-layout:fixed ;
+  width:100%;
+}
+td {
+  padding: 0.5rem;
+}
+
+
+.demo-index-image {
+  border: 1px solid black;
+  background-image: url("images/homePage.jpg");
+  background-color: #b3d1ff;
+  height: 645px;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+  padding: 5px;
+}
+
+.demo-text {
+  text-align: left;
+  position: relative;
+  background-color: #ccccc;
+}
+</style>
+<body>
+
+<div class="demo-index-image">
+<h1 style="color:white">AWS AI/ML Lab Portal</h1>
+
+<table>
+  <tr>
+    <td style="background-image: url('images/txt_detection2.jpg');background-color: #d98026;background-size: 50px 50px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Image Text Detection</h3> 
+	<small>Extract text, important numbers, key entities, codes etc. from the plain/curved surface images <br>
+	<b>Amazon Rekognition</b>
+	<br><br>
+	<a href="detectText.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;"> Image Text Detection</a>
+	</small>
+	</td>
+	
+    <td style="background-image: url('images/ocr_cheque.png');background-color: #879919;background-size: 60px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Cheque Processing</h3> 
+	<small>This solution is OCR based cheque processing to extract key entities like issuer, payer, bank name and address, amount etc. from the scanned cheque images <br>
+	<b> Amazon Textract, Amazon Comprehend </b>
+	<br><br>
+	<a href="processCheque.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">OCR Cheque Process</a>
+	</small>
+	</td>
+	
+	<td style="background-image: url('images/financial_statement_analysis.jpg');background-color: #ed5633;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Financial Statement Analysis</h3>
+	<small>Extract financial tabular information from the annual financial statement PDF of an Organization. Along with that it also extract the text and helps doing text analytics. <br>
+	<b>Amazon Textract, Amazon Comprehend </b>
+
+	<br><br>
+	<a href="processPDF.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Financial Statement Analysis</a>
+	</small>
+	</td>
+	
+	<td style="background-image: url('images/audio_sentiment.png');background-color: #029909;background-size: 60px 50px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Audio Sentiment Analysis</h3> 
+	<small>Transcribe the input audio files to text, Identify the content by speaker and predict overall sentiment of the conversation <br>
+	<b>Amazon Transcribe, Amazon Comprehend </b>
+	<br><br>
+	<a href="processAudio.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Audio Sentiment Analysis</a>
+	</small>
+	</td>
+	
+	</tr>
+  
+<tr> 
+
+ <td style="background-image: url('images/Dusimage.png');background-color: #879919;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Document Understanding Solution</h3>
+	<small>DUS provides an easy-to-use web application that enables you to ingest and analyze text files, extract text from documents, identify structural data (tables, key value pairs), extract critical information (entities), and create smart search indexes from the data<br>
+	<b>Amazon Textract,Amazon Comprehend, Amazon ElasticsSearch,AWS Lambda </b>
+	<br><br>
+	<a href="https://d1wjw4yvmj9yu1.cloudfront.net/home" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Document Understanding Solution</a>
+	</small>
+	</td> 
+<td style="background-image: url('images/LookoutVision.jpg');background-color: #d98026;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Image Classification(Anomalous/Non-Anomalous)</h3>
+	<small>Train the Vision API on custom images, detect anomalies from the images being uploaded<br>
+	<b>AWS Lambda, Amazon Lookout for Vision </b>
+
+	<br><br>
+	<a href="https://dev6003.d1qujekwwryiax.amplifyapp.com/" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Image Classification(Anomalous/Non-Anomalous)</a>
+	</small>
+	</td> 
+
+	<td style="background-image: url('images/video_analytics_icon.jpg');background-color: #ef9663;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Video Analytics</h3>
+	<small>Prcoess the input video by splitting into the frames, detects object/face/celeberities, transcribes the video to text, enables language translation, extract keyphrases and entities <br>
+	<b> AWS Image Detection/ Rekognition </b>
+	
+	<br><br>
+	<a href="https://d2oye54xaccibf.cloudfront.net" rel="nofollow" target="_blank" style="color:#33ffad;font-size:96%;">Video Analytics</a>
+	</small>
+	</td>
+    
+	<td style="background-image: url('images/student_chatbot.jpg');background-color: #cc6633;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Student Loan Chat Bot</h3> 
+	<small>This is about chat bot for a student loan. Multi Turn Conversational chatbot that takes user inputs and perform the defined task and return output back to the user <br>
+	<b>Amazon Lex AI Service, Amazon Lambda</b>
+	<br><br>
+	<a href="loanChatBot.html" rel="nofollow" target="_blank" style="color:#33ffad;font-size:96%;">Student Loan Chat Bot</a>	
+	</small>
+	</td>
+		
+  <tr>
+  
+    <td style="background-image: url('images/twitter_sentiment-icon-2.jpg');background-color: #d9554d;background-size: 60px 50px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Twitter Sentiment Bot</h3> 
+	<small>Multi Turn Conversational chatbot that takes user inputs and perform the defined task and return output back to the user <br>
+	<b>Amazon Lex AI Service, Amazon Lambda</b>
+	<br><br>
+	<a href="Twitterbot.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Twitter Sentiment Bot</a>
+	</small>
+	</td>
+	
+  
+    <td style="background-image: url('images/twitter_sentiment-icon-1.jpg');background-color: #d99910;background-size: 60px 60px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Twitter Sentiment Analysis</h3>
+	<small>This solution is analysing twitter sentiment of the given search string. Extract twitter message and analyze its sentiment. <br>
+	<b> Amazon Comprehend, Amazon Rekognition </b>
+	<br><br>
+	<a href="processTweetMsg.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Twitter Sentiment Analysis</a>
+	</small>
+	</td>
+
+<td style="background-image: url('images/tellmi.png');background-color: #cc6633;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">AI Platform-TellMi</h3>
+	<small>TellMi automates the analyses of all your customer interactions across different languages, in real time.Based on language, topic and sentiment we can make sure your customers are helped by the right person at the right time enabled with a global overview of what your customers are telling you and how they feel about it. <br>
+	<b>Amazon SageMaker, Heroku(Web Interface)</b>
+	<br><br>
+	<a href="https://s3.us-east-2.amazonaws.com/www.my-image-analysis.com/usecasevideos/TellMi+Demo.mp4" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">AI Platform-TellMi</a>
+	</small>
+	</td> 
+ <td style="background-image: url('images/Qs_SM.png');background-color: #d98026;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">QuickSight-SageMaker Integration</h3>
+	<small>Integrate Amazon SageMaker ML models with Amazon QuickSight(Spice Engine) to analyze the augmented data and to get meaningful insights<br>
+	<b>Amazon QuickSight, Amazon SageMaker Model</b>
+
+	<br><br>
+	<a href="QS_SageMaker.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">QuickSight-SageMaker Integration</a>
+	</small>
+	</td> 
+
+  </tr>
+  <tr>
+   <td style="background-image: url('images/mlops.png');background-color: #d9354d;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">BYOM-Model Migration</h3>
+	<small>This accelerator helps migrate the custom model trained outside sagemaker and automate CI/CD retraining/deployment of migrated models.<br>
+	<b>AWS MLOPS Framework,Amazon SageMaker</b>
+
+	<br><br>
+	<a href="https://s3.us-east-2.amazonaws.com/www.my-image-analysis.com/usecasevideos/BYOM_DemoV1.mp4" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">BYOM-Model Migration</a>
+	</small>
+	</td>
+   <td style="background-image: url('images/mlops.png');background-color: #ed5633;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">MLOPs-Model Monitor</h3>
+	<small>This is a technical walktrhough of the AWS SageMaker Model monitoring process levearging AWS MLOPs framework<br>
+	<b>AWS MLOPS Framework,Amazon SageMaker Model Monitor</b>
+
+	<br><br>
+	<a href="https://s3.us-east-2.amazonaws.com/www.my-image-analysis.com/usecasevideos/MLOPs-ModelMonitoring.mp4" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">MLOPs-Model Monitor</a>
+	</small>
+	</td>
+
+ <td style="background-image: url('images/objdeticon.png');background-color: #d98026;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Object Detection</h3>
+	<small>This is the object detection use case build on top of deep learning model<br>
+	<b>Amazon SageMaker Object Detection Model, AWS Lambda </b>
+
+	<br><br>
+	<a href="https://s3.console.aws.amazon.com/s3/buckets/wipobjdetection?region=us-east-1&tab=objects" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Object Detection</a>
+	</small>
+	</td> 
+
+   <td style="background-image: url('images/delinquency_icon.jpg');background-color: #d9354d;background-size: 50px 40px;background-position: right top;background-repeat: no-repeat;">
+	<h3 style="color:white; align='left';text-shadow: white 0px 0px 10px;">Delinquency Prediction</h3>
+	<small>This is the banking domain use case to predict the delinquency and extends to consider the impact of external factors like Covid that can drift the base delinquency by factor based on Covid impact <br>
+	<b>Amazon SageMaker K-means Clusters </b>
+
+	<br><br>
+	<a href="deliquency.html" rel="nofollow" target="_self" style="color:#33ffad;font-size:96%;">Delinquency Prediction</a>
+	</small>
+	</td>
+  </tr>
+  
+ </table>
+</div>
+<script type="text/javascript">
+  (function(w, d, x, id){
+    s=d.createElement('script');
+    s.src='https://dend6g4sigg57.cloudfront.net/amazon-connect-chat-interface-client.js';
+    s.async=1;
+    s.id=id;
+    d.getElementsByTagName('head')[0].appendChild(s);
+    w[x] =  w[x] || function() { (w[x].ac = w[x].ac || []).push(arguments) };
+  })(window, document, 'amazon_connect', 'd05c61cd-b6fe-4d35-9657-28ceaeb7f2e6');
+  amazon_connect('styles', { openChat: { color: 'white', backgroundColor: '#123456'}, closeChat: { color: 'white', backgroundColor: '#123456'} });
+  amazon_connect('snippetId', 'QVFJREFIanUzYnhvNFBocFpzVHdoQjZmUUtOd1FaMjMxR3ZDRG9RRWNFUkFkM3dWVWdFME1MZUlFMFNKenVvS3BlTVN6dnJmQUFBQWJqQnNCZ2txaGtpRzl3MEJCd2FnWHpCZEFnRUFNRmdHQ1NxR1NJYjNEUUVIQVRBZUJnbGdoa2dCWlFNRUFTNHdFUVFNWEJxclN1L28rckQxYkZIdkFnRVFnQ3YrWmkvN0R2Mko1S0c5emtWTDNqVUhMMXlKSzcvWnRZTHhETDY5ZmxhNjQxbEdTOWxWei9mN3dhRTk6Om5nbDNMNzM3T1hqUk1oSUk0SDh5NnJNcUdEWnNyd1NpNTBDMmhRcWwycHA4bUU3MUg5cXkxUExCWjZpcmtiVTRGbkNZQ2pCc2txazRoQnBDSXFyQTQvNnZxeEtoc1VXR2JKT0E2Tm1ZV0RlVU5PeXBmejBhcUZVVVRRS2J3enFXQ0ppRDhTOUNjb1I2K1VkcnRTTkxucG5JUEk2NjkrRT0=');
+  amazon_connect('supportedMessagingContentTypes', [ 'text/plain', 'text/markdown' ]);
+</script>
+</body>
+</html>

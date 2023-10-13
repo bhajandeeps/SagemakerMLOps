@@ -1,0 +1,148 @@
+<html>
+<head>
+<title>Audio Sentiment Analysis</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12
+}
+
+.demo-image {
+  background-image: url("images/detectTextImage.jpg");
+  background-color: #b3d1ff;
+  height: 660px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.demo-text {
+  text-align: left;
+  position: relative;
+  background-color: #cccccc;
+  font-size: 12
+}
+
+.progress {cursor: progress;}
+.pointer {cursor: pointer;}
+}
+
+</style>
+
+<!--<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script> -->
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+<script>
+function previewFile(obj) {
+ var fileExtension = ['mp4', 'mp3', 'wma', 'wav'];
+ if ($.inArray($(obj).val().split('.').pop().toLowerCase(), fileExtension) == -1) {
+  alert("Only 'mp4', 'mp3', 'wma', 'wav' formats are allowed.");
+  window.location.reload();
+ }
+ 
+ var files = event.target.files;
+ $("#previewid").attr("src", URL.createObjectURL(files[0]));
+ document.getElementById("audioid").load();
+ 
+ $("input").prop( "disabled", false );
+ 
+}
+</script>
+
+</head>
+<body>
+<div class="demo-image">
+<h1 style="color:#4d0000">Audio Sentiment Analysis</</h1>
+<form id="contactForm" method="post" enctype="multipart/form-data" >
+<h5 style="color:#4d0000">Select an audio file to process:
+<input class="pointer" type="file" name="file" onchange="previewFile(this)">
+</h5>
+
+<audio id="audioid" controls> <source src="" id="previewid" /> </audio>
+
+<br> <br>
+<input class="pointer" type="submit" value="Analyse Audio File" id="butSubmit" name="submit" disabled>
+<button class="butSubmitFetch" id="butSubmitFetch" disabled>Fetch Audio Result</button>
+<button class="pointer" onClick="window.location.reload();">Refresh</button>
+<button class="pointer" onClick="document.location = 'index.html'">Back to Home</button>
+</form>
+<table> <tr><td>
+  <img src="images/VoiceAnalyticsArch.jpg" alt=" " style="width: 90%;max-height: 100%" />
+</td></tr>
+</table>
+
+<script>
+ $("#contactForm").on('submit', function(event) {	
+  event.preventDefault(); // to prevent default page reloading
+  document.body.style.cursor = 'wait';  
+  var form = $('#contactForm')[0];
+  var data = new FormData(form);
+  
+  // disabled the submit button
+  $("#butSubmit").prop("disabled", true);
+  
+  $.ajax({
+   type: "POST",
+   enctype: 'multipart/form-data',
+   url: "https://2gnjls9tp2.execute-api.us-east-1.amazonaws.com/v1/processaudio",
+   data: data,
+   processData: false,
+   contentType: false,
+   success: function(data) {
+    $("#contactResponse").html(data);
+	document.body.style.cursor = 'default';
+	/*$("#contactResponse").text(data);*/
+    /*$("#butSubmit").prop("disabled", false); */
+	/* ("#butSubmitFetch").prop("disabled", false);*/
+	$(".butSubmitFetch").prop('disabled', false); 
+   },
+   error: function(e) {
+    $("#contactResponse").html(data);
+    $("#errorResponse").text(e.responseText);
+    /* $("#butSubmit").prop("disabled", false); */
+   }
+  });
+ }); 
+ 
+ $('#butSubmitFetch').click(function(){
+  event.preventDefault(); // to prevent default page reloading
+  document.body.style.cursor = 'wait';  
+  var form = $('#contactForm')[0];
+  var data = new FormData(form);
+  
+  // disabled the submit button
+  $("#butSubmitFetch").prop("disabled", true);
+  
+  $.ajax({
+   type: "POST",
+   enctype: 'multipart/form-data',
+   url: "https://2gnjls9tp2.execute-api.us-east-1.amazonaws.com/v1/fetchaudioresult",
+   data: data,
+   processData: false,
+   contentType: false,
+   success: function(data) {
+    $("#contactResponse").html(data);
+	document.body.style.cursor = 'default';
+	$(".butSubmitFetch").prop('disabled', false); 
+   },
+   error: function(e) {
+    $("#contactResponse").html(data);
+    $("#errorResponse").text(e.responseText);
+    /* $("#butSubmitFetch").prop("disabled", false); */
+   }
+  });
+});
+</script>
+<div id="contactResponse" class="demo-text">
+</div>
+<div id="errorResponse"></div>
+<br>
+</div>
+
+
+</body>
+</html>

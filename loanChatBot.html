@@ -1,0 +1,146 @@
+<html>
+<head>
+<title>Student Loan Chat Bot</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.demo-image {
+  background-image: url("images/detectTextImage.jpg");
+  background-color: #b3d1ff;
+  height: 660px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.demo-text {
+  text-align: left;
+  position: relative;
+  background-color: #cccccc;
+}
+
+.progress {cursor: progress;}
+.pointer {cursor: pointer;}
+
+</style>
+
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+
+<script>
+function previewFile(obj) {
+ var fileExtension = ['jpeg', 'jpg', 'png'];
+ if ($.inArray($(obj).val().split('.').pop().toLowerCase(), fileExtension) == -1) {
+  alert("Only '.jpeg','.jpg', '.png' formats are allowed.");
+  window.location.reload();
+ }
+ 
+ const preview = document.querySelector('img');
+ const file = document.querySelector('input[type=file]').files[0];
+ const reader = new FileReader();
+ reader.addEventListener("load", function() {
+  // convert image file to base64 string
+  preview.src = reader.result;
+  $("input").prop( "disabled", false );
+ }, false);
+
+/* Alternate way if any performance issue loading large image then try use createObjectURL
+   img.src = window.URL.createObjectURL(fileInput.files[i]);
+*/
+
+ if (file) {
+  reader.readAsDataURL(file);
+ }
+}
+
+const getBlobFromUrl = (myImageUrl) => {
+    return new Promise((resolve, reject) => {
+        let request = new XMLHttpRequest();
+        request.open('GET', myImageUrl, true);
+        request.responseType = 'blob';
+        request.onload = () => {
+            resolve(request.response);
+        };
+        request.onerror = reject;
+        request.send();
+    })
+}
+
+function previewSample(obj) {
+const preview = document.querySelector('img')
+ /*const file = new File([blob],'samples/cable_id.jpg');;*/
+ //const file = document.querySelector('samples/cable_id.jpg').files[0];
+ /* const file = 'samples/cable_id.jpg';*/
+ /*const file = new File([blob], 'samples/cable_id.jpg', {type:'image/jpeg'}); */
+ let myBlob = getBlobFromUrl('samples/cable_id.jpg');
+ const reader = new FileReader();
+ reader.addEventListener("load", function() {
+  // convert image file to base64 string
+  preview.src = reader.result;
+  $("input").prop( "disabled", false );
+ }, false);
+
+ if (myBlob) {
+  reader.readAsDataURL(myBlob);
+ }		
+}
+</script>
+
+</head>
+<body>
+<div class="demo-image">
+<h1 style="color:#4d0000">Student Loan Chat Bot</h1>
+
+<button class="pointer" onclick=" window.open('https://d1uk60tbby4k8h.cloudfront.net/index.html', '_blank'); return false;">Open Student Loan Chat Bot</button>
+<button class="pointer" onClick="window.location.reload();">Refresh</button>
+<button class="pointer" onClick="document.location = 'index.html'">Back to Home</button>
+<table> <tr><td>
+     <img src="images/ChatbotFlow.jpg" alt=" " style="width: 100%;max-height: 100%" />
+	 </td></tr>
+</table>
+
+<script>
+ $("#contactForm").on('submit', function(event) {
+  event.preventDefault(); // to prevent default page reloading
+  document.body.style.cursor = 'wait';
+  
+  var form = $('#contactForm')[0];
+  var data = new FormData(form);
+  
+  // disabled the submit button
+  $("#butSubmit").prop("disabled", true);
+  
+  $.ajax({
+   type: "POST",
+   enctype: 'multipart/form-data',
+   url: "https://eblspiv040.execute-api.us-east-1.amazonaws.com/v1/imgprocess",
+   data: data,
+   processData: false,
+   contentType: false,
+   success: function(data) {
+    $("#contactResponse").html(data);
+	document.body.style.cursor = 'default';
+	/*$("#contactResponse").text(data);*/
+    /*$("#butSubmit").prop("disabled", false); */
+   },
+   error: function(e) {
+    $("#contactResponse").html(data);
+    $("#errorResponse").text(e.responseText);
+    /* $("#butSubmit").prop("disabled", false); */
+   }
+  });
+ });
+</script>
+<div id="contactResponse" class="demo-text">
+</div>
+<div id="errorResponse"></div>
+<br>
+</div>
+
+
+</body>
+</html>

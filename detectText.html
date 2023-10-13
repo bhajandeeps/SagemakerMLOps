@@ -1,0 +1,119 @@
+<html>
+<head>
+<title>Image Text Detection</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.demo-image {
+  background-image: url("images/detectTextImage.jpg");
+  background-color: #b3d1ff;
+  height: 660px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.demo-text {
+  text-align: left;
+  position: relative;
+  background-color: #cccccc;
+}
+
+.progress {cursor: progress;}
+.pointer {cursor: pointer;}
+
+</style>
+
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+
+<script>
+function previewFile(obj) {
+ var fileExtension = ['jpeg', 'jpg', 'png'];
+ if ($.inArray($(obj).val().split('.').pop().toLowerCase(), fileExtension) == -1) {
+  alert("Only '.jpeg','.jpg', '.png' formats are allowed.");
+  window.location.reload();
+ }
+ 
+ const preview = document.querySelector('img');
+ const file = document.querySelector('input[type=file]').files[0];
+ const reader = new FileReader();
+ reader.addEventListener("load", function() {
+  // convert image file to base64 string
+  preview.src = reader.result;
+  $("input").prop( "disabled", false );
+ }, false);
+
+ if (file) {
+  reader.readAsDataURL(file);
+ }
+} 
+</script>
+
+</head>
+<!-- <body bgcolor="#AFEEEE" background="images/detectTextImage.jpg"> -->
+<body>
+<div class="demo-image">
+<h1 style="color:#4d0000">Image Text Detection</h1>
+<form id="contactForm" method="post" enctype="multipart/form-data" >
+<h5 style="color:#4d0000">Select an image (jpg/png) to process:
+<input class="pointer" type="file" name="file" onchange="previewFile(this)">
+</h5>
+<img src="" height="300" width="500" alt="Image preview...">
+<br> <br>
+<input class="pointer" type="submit" value="Analyse Image" id="butSubmit" name="submit" disabled>
+<button class="pointer" onClick="window.location.reload();">Refresh</button>
+<button class="pointer" onClick="document.location = 'index.html'">Back to Home</button>
+</form>
+</table>
+<table> <tr><td>
+  <img src="images/ImageReko.jpg" alt=" " style="width: 90%;max-height: 100%" />
+</td></tr>
+</table>
+
+
+<script>
+ $("#contactForm").on('submit', function(event) {
+  event.preventDefault(); // to prevent default page reloading
+  document.body.style.cursor = 'wait';
+  
+  var form = $('#contactForm')[0];
+  var data = new FormData(form);
+  
+  // disabled the submit button
+  $("#butSubmit").prop("disabled", true);
+  
+  $.ajax({
+   type: "POST",
+   enctype: 'multipart/form-data',
+   url: "https://eblspiv040.execute-api.us-east-1.amazonaws.com/v1/imgprocess",
+   data: data,
+   processData: false,
+   contentType: false,
+   success: function(data) {
+    $("#contactResponse").html(data);
+	document.body.style.cursor = 'default';
+	/*$("#contactResponse").text(data);*/
+    /*$("#butSubmit").prop("disabled", false); */
+   },
+   error: function(e) {
+    $("#contactResponse").html(data);
+    $("#errorResponse").text(e.responseText);
+    /* $("#butSubmit").prop("disabled", false); */
+   }
+  });
+ }); 
+</script>
+<div id="contactResponse" class="demo-text">
+</div>
+<div id="errorResponse"></div>
+<br>
+</div>
+
+
+</body>
+</html>
